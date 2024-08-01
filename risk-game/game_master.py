@@ -1,6 +1,6 @@
-from game.player_agent import PlayerAgent
-from game.game_state import GameState
-from game.rules import Rules
+from risk-game.player_agent import PlayerAgent
+from risk-game.game_state import GameState
+from risk-game.rules import Rules
 
 class GameMaster:
     def __init__(self, num_players):

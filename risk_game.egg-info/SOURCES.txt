@@ -13,6 +13,7 @@ risk_game.egg-info/entry_points.txt
 risk_game.egg-info/requires.txt
 risk_game.egg-info/top_level.txt
 tests/__init__.py
+tests/test_adding.py
 tests/test_game_master.py
 tests/test_game_state.py
 tests/test_player_agent.py

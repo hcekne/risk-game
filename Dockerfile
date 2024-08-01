@@ -1,5 +1,12 @@
 FROM python:3.11-slim
 
+
+RUN apt-get update && \
+	apt-get install -y \
+	nano \
+	git
+
+
 # Set the working directory
 WORKDIR /app
 
@@ -21,7 +28,7 @@ ARG GROUP_ID
 
 # Create a non-root user with home directory
 RUN groupadd -g $GROUP_ID $USER_NAME && \
-    useradd -u $USER_ID -g $GROUP_ID -m -d /home/$USER_NAME -s /bin/bash $USER_NAME
+	useradd -u $USER_ID -g $GROUP_ID -m -d /home/$USER_NAME -s /bin/bash $USER_NAME
 
 # Set permissions for the working directory
 RUN chown -R $USER_NAME:$USER_NAME /app
