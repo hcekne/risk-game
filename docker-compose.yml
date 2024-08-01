@@ -1,0 +1,21 @@
+services:
+  risk-game:
+    build:
+      context: .
+      args:
+        USER_NAME: ${USER_NAME}
+        USER_ID: ${USER_ID}
+        GROUP_ID: ${GROUP_ID}
+    image: risk-game:latest  # Specify the image name
+    container_name: risk-game-container
+    user: "${USER_NAME}"  # Run as the user specified
+    volumes:
+      - .:/app  # Mount the current directory to /app in the container
+      - ./custom_startup.sh:/usr/local/bin/custom_startup.sh # custom startup script to install codebase
+    ports:
+      - "8000:80"
+    environment:
+      - USER_ID=${USER_ID}
+      - GROUP_ID=${GROUP_ID}
+      - USER_NAME=${USER_NAME}  # Set the username
+    #command: ["/usr/local/bin/custom_startup.sh", "tail", "-f", "/dev/null"]
