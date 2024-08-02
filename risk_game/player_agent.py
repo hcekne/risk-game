@@ -1,6 +1,6 @@
 class PlayerAgent:
-    def __init__(self, player_id):
-        self.id = player_id
+    def __init__(self, name: str):
+        self.name: str = name
 
     def make_move(self, game_state):
         # Implement strategy to make a move

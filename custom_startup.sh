@@ -9,4 +9,6 @@ whoami
 # Install Python packages for each service
 pip install -e /app
 
-tail -f /dev/null
+# Execute the command
+exec "$@"
+# tail -f /dev/null

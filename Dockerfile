@@ -6,7 +6,6 @@ RUN apt-get update && \
 	nano \
 	git
 
-
 # Set the working directory
 WORKDIR /app
 
@@ -44,7 +43,7 @@ USER $USER_NAME
 EXPOSE 80
 
 # Set the/custom_startup 
-ENTRYPOINT ["/usr/local/bin/custom_startup.sh"]
+# ENTRYPOINT ["/usr/local/bin/custom_startup.sh"]
 
 # set the default command to run when starting the container
 #CMD ["tail", "-f", "/dev/null"]
