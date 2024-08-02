@@ -1,2 +1,8 @@
 # Add your project dependencies here
+ipython
+matplotlib
+mypy
+numpy
+pandas
 pytest
+seaborn

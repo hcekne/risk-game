@@ -1,11 +1,11 @@
 README.md
 setup.py
-risk-game/__init__.py
-risk-game/game_master.py
-risk-game/game_state.py
-risk-game/player_agent.py
-risk-game/rules.py
-risk-game/utils.py
+risk_game/__init__.py
+risk_game/game_master.py
+risk_game/game_state.py
+risk_game/player_agent.py
+risk_game/rules.py
+risk_game/utils.py
 risk_game.egg-info/PKG-INFO
 risk_game.egg-info/SOURCES.txt
 risk_game.egg-info/dependency_links.txt

@@ -1,1 +1,7 @@
+ipython
+matplotlib
+mypy
+numpy
+pandas
 pytest
+seaborn
