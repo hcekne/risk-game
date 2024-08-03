@@ -5,6 +5,7 @@ risk_game/game_master.py
 risk_game/game_state.py
 risk_game/player_agent.py
 risk_game/rules.py
+risk_game/running_the_game.py
 risk_game/utils.py
 risk_game.egg-info/PKG-INFO
 risk_game.egg-info/SOURCES.txt

@@ -1,3 +1,4 @@
+groq
 ipython
 matplotlib
 mypy
