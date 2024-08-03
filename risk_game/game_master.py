@@ -13,10 +13,10 @@ class GameMaster:
         self.rules = Rules()
         self.current_player_index = -1
 
-    def add_player(self, player: PlayerAgent) -> None:
+    def add_player(self, name:str, model_number:int) -> None:
         if len(self.players) >= 6:
             raise ValueError("Cannot add more than 6 players")
-        self.players.append(player)
+        self.players.append(PlayerAgent(name, model_number))
 
     def init_game_state(self) -> None:
         num_players = len(self.players)

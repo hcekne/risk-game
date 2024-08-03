@@ -3,7 +3,7 @@ import numpy as np
 import random
 from typing import Dict, List, Tuple
 from risk_game.player_agent import PlayerAgent
-from risk_game.utils import TERRITORIES, CONTINENT_BONUSES
+from risk_game.game_utils import TERRITORIES, CONTINENT_BONUSES
 
 class GameState:
     def __init__(self, players: List[PlayerAgent]) -> None:
@@ -28,34 +28,6 @@ class GameState:
             # Initialize an array with rows equal to the number of territories and columns equal to the number of players
             continent_arrays[continent] = np.zeros((len(territories), self.num_players), dtype=int)
         return continent_arrays
-    
-    # def assign_territories_to_players_random(self, players: List[PlayerAgent]) -> int:
-    #     territories = list(self.territories_df['Territory'])
-    #     random.shuffle(territories)
-
-    #     num_players = len(players)
-    #     for i, territory in enumerate(territories):
-    #         player_index = i % num_players
-    #         player_name = players[player_index].name
-    #         print(f'Assigning {territory} to {player_name} with index {player_index}')
-    #         self.territories_df.loc[self.territories_df['Territory'] == territory, f'Player_{player_name}'] = 1
-    #         self.last_player_index = player_index  # Update the last player index to the current player
-        
-    #     return self.last_player_index
-    
-    # def assign_territories_to_players_random(self, players: List[PlayerAgent]) -> int:
-    #     territories = list(self.territories_df['Territory'])
-    #     random.shuffle(territories)
-
-    #     num_players = len(players)
-    #     for i, territory in enumerate(territories):
-    #         player = players[i % num_players]
-    #         player_name = player.name
-    #         print(f'Assigning {territory} to {player_name}')
-    #         self.territories_df.loc[self.territories_df['Territory'] == territory, f'Player_{player_name}'] = 1
-    #         self.last_player_index = i % num_players  # Update the last player index to the current player
-
-    #     return self.last_player_index
     
 
     def assign_territories_to_players_random(self, players: List[PlayerAgent]) -> int:

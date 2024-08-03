@@ -7,6 +7,8 @@ services:
         USER_ID: ${USER_ID}
         GROUP_ID: ${GROUP_ID}
     image: risk-game:latest  # Specify the image name
+    env_file:
+      - .env  # Load the environment variables from the .env file
     container_name: risk-game-container
     user: "${USER_NAME}"  # Run as the user specified
     volumes:
