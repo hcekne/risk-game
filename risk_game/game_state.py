@@ -65,11 +65,14 @@ class GameState:
         total_sum = self.territories_df.iloc[:, 1:].sum().sum()  
         return total_sum == 42
     
-    def check_terr_control(self, player_name : str, territory: str) -> bool:
-        return self.territories_df.loc[
+    def check_terr_control(self, player_name: str, territory: str) -> bool:
+        controlled = self.territories_df.loc[
             self.territories_df['Territory'] == territory, 
             f'Player_{player_name}'
-        ].values[0] > 0
+        ]
+        if controlled.empty:
+            return False
+        return controlled.values[0] > 0
     
 
     def update_troops(
@@ -86,3 +89,7 @@ class GameState:
                 f'''Invalid move data: territory={territory}, 
                 num_troops={num_troops}'''
             )
+
+    def get_player_territories(self, player_name: str) -> List[str]:
+        return list(self.territories_df[
+            self.territories_df[f'Player_{player_name}'] > 0]['Territory'])

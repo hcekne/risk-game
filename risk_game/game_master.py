@@ -47,6 +47,7 @@ class GameMaster:
         if player_to_remove:
             self.active_players.remove(player_to_remove)
             self.dead_players.append(player_to_remove)
+            self.game_state.num_players = len(self.active_players)
             # Adjust current_player_index based on the removed player's position
             if remove_index < self.current_player_index:
                 self.current_player_index -= 1
@@ -86,6 +87,10 @@ class GameMaster:
         return True
 
 
+    def update_current_player_index(self):
+        self.current_player_index = (
+            (self.current_player_index + 1) % len(self.active_players)
+        )
     
     def distribute_territories_random(self) -> int:
         if not self.game_state:
@@ -117,6 +122,36 @@ class GameMaster:
     ) -> None:
         territory, num_troops, _ = move  # Unpack the tuple, ignore reasoning
         player.troops -= num_troops
+
+    def ensure_valid_move(self, player: 'PlayerAgent'):
+        valid_move = False
+        while not valid_move:
+            move = player.make_initial_troop_placement(self.game_state)
+            print(f"Proposed move: {move}")
+            if self.validate_move(player, move):
+                print("Move is valid")
+                self.update_game_state(player, move)
+                self.reduce_player_troops(player, move)
+                valid_move = True
+            else:
+                print("Move is invalid, asking for a new move")
+
+    def initial_troop_placement(self):
+        #self.current_player_index = 0
+        while any(player.troops > 0 for player in self.active_players):
+            current_player = self.active_players[self.current_player_index]
+            print(f"*****-------------NOW PLACING TROOPS FOR: -------------*****")
+            print(f"Current player name: {current_player.name}")
+            if current_player.troops > 0:
+                self.ensure_valid_move(current_player)
+            # Move to the next player
+            self.current_player_index = (
+                (self.current_player_index + 1) % len(self.active_players)
+            )
+        print("Initial troop placement complete")
+
+    
+
 
 
     def play_game(self):
