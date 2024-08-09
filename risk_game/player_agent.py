@@ -1,15 +1,16 @@
 import json
 import re
-from typing import Dict,Optional, Tuple
+from typing import Dict,Optional,List,Tuple
 from network_utils import GroqClient
 
 class PlayerAgent:
     def __init__(self, name: str, model_number: int)-> None:
-        self.name = name
-        self.model_number = model_number
+        self.name: str = name
+        self.model_number: int = model_number
         self.agent_model = GroqClient(model_number)
-        self.include_reasoning = True
-        self.troops = 0
+        self.include_reasoning: bool = True
+        self.troops: int = 0
+        self.cards: List[Dict[str,str]]= []
 
     def _send_message(self, message_content: str) -> str:
         messages = [

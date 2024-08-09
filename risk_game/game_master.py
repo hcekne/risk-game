@@ -1,22 +1,31 @@
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import random
 from risk_game.player_agent import PlayerAgent
 from risk_game.game_state import GameState
 from risk_game.rules import Rules
+from risk_game.card_deck import Deck, Card
 
 class GameMaster:
-    def __init__(self)-> None:
+    def __init__(self, rules: Rules)-> None:
         self.players: List[PlayerAgent] = []
         self.dead_players: List[PlayerAgent] = []
         self.active_players: List[PlayerAgent] = []
         self.game_state = None
+        self.game_round = 0
         self.rules = Rules()
         self.current_player_index = -1
+        self.deck = None
+        self.discarded_cards = []
+        self.rules = rules  # Store the rules instance
+        self.trade_count = 0  # Track the number of trades for progressive mode
+        self.player_cards: Dict[str, List[Card]] = {}
 
     def add_player(self, name:str, model_number:int) -> None:
         if len(self.players) >= 6:
             raise ValueError("Cannot add more than 6 players")
-        self.players.append(PlayerAgent(name, model_number))
+        player = PlayerAgent(name, model_number)
+        self.players.append(player)
+        self.player_cards[name] = []  # Initialize an empty list of cards 
 
     def calculate_initial_troops(self, num_players: int) -> int:
         initial_troops_map = {2: 40,3: 35, 4: 30,5: 25,6: 20}
@@ -33,6 +42,7 @@ class GameMaster:
             player.troops = intial_troops
         self.active_players = self.players.copy()
         self.game_state = GameState(self.active_players)
+        self.deck = Deck()
 
     def remove_player(self, player_name: str) -> None:
         player_to_remove = None
@@ -61,7 +71,6 @@ class GameMaster:
         else:
             print(f"Player {player_name} not found in active players")
 
-
     def list_players(self) -> None:
         for player in self.players:
             print(f"Name: {player.name}")
@@ -86,7 +95,6 @@ class GameMaster:
             return False
         return True
 
-
     def update_current_player_index(self):
         self.current_player_index = (
             (self.current_player_index + 1) % len(self.active_players)
@@ -99,22 +107,19 @@ class GameMaster:
             self.game_state.assign_territories_to_players_random(self.active_players))
         return self.current_player_index
     
-
-
-    # not used yet
-    def get_next_player(self) -> Tuple[int, str]:
-        if not self.game_state:
-            raise ValueError("Game state is not initialized")
-        return self.game_state.get_next_player(self.players)
-
-
+    def choose_capitals(self) -> None:
+        if self.rules.capitals: 
+            for player in self.active_players:
+                while player.capital is None:
+                    capital = player.choose_capital(self.game_state)
+                    player.capital = capital
+                
     def update_game_state(
         self, player: 'PlayerAgent', 
         move: Tuple[Optional[str], Optional[int], Optional[str]]
     ) -> None:
         territory, num_troops, _ = move  # Unpack the tuple, ignore reasoning
         self.game_state.update_troops(player, territory, num_troops)
-
 
     def reduce_player_troops(
         self, player: 'PlayerAgent', 
@@ -150,17 +155,119 @@ class GameMaster:
             )
         print("Initial troop placement complete")
 
-    
+    def play_a_turn(self, player: 'PlayerAgent')-> None:
+        print(f"Player {player.name} is starting their turn.")
+        # Phase 1: Troop Placement
+        self.phase_1_troop_placement(player)
+        self.phase_2_attack(player)
+        self.phase_3_fortify(player)
+        print(f"Player {player.name} has completed their turn.")
+        # Phase 2: Attack
+        # Phase 3: Fortify
+
+    def trade_in_cards(self, player: 'PlayerAgent') -> None:
+        player_cards = self.player_cards[player.name]
+        game_state = self.game_state
+
+        # Ask the player to propose a trade
+        cards_to_trade = player.propose_trade(player_cards, game_state)
+
+        # Verify the proposed trade using the rules instance
+        valid, troops = self.rules.verify_card_combination(cards_to_trade)
+        if valid:
+            # Remove the traded cards from the player's hand
+            for card in cards_to_trade:
+                player_cards.remove(card)
+                self.discarded_card(card)
+
+            # Grant the player the corresponding troops
+            player.troops_left += troops
+            print(f"{player.name} traded in cards for {troops} extra troops.")
+        else:
+            print(f"Invalid trade attempt by {player.name}.")
+
+    def phase_1_troop_placement(self, player: 'PlayerAgent')-> None:
+        # figure out if the player needs to trade in cards (i.e. has 5 or more cards)
+
+
+        while len(self.player_cards[player.name]) >= 5:
+            self.trade_in_cards(player)
+        
+        if (len(self.player_cards[player.name]) >= 3):
+            # check if the player has a set of cards that can be traded in
+            if self.rules.has_valid_combination(self.player_cards[player.name]):
+
+            # ask the player if they want to trade in cards and if so trade the 
+                if player.agree_to_trade(self.game_state):
+                    self.trade_in_cards(player)
+
+        # figure out how many troops the player gets
+
+
+        # get the territories the player controls
+        # pass the player and the territories and the number of troops to the player agent
+        # get the move from the player agent
+        # validate the move
+        # update the game state
+        # reduce the number of troops for the player
+        # end phase 1
+        pass
+
+    def phase_2_attack(self, player: 'PlayerAgent')-> None:
+        print(f"Player {player.name} is attacking")
+
+        # if player conquered a territory in phase 2, they get a card
+        # need to check for this
 
 
 
-    def play_game(self):
-        while not self.game_state.is_game_over():
+        # 1. pass the player the game state and ask if he wants to attack 
+        # another territory
+        # 2.
+        pass
+
+    def phase_3_fortify(self, player: 'PlayerAgent') -> None:
+        print(f"Player {player.name} is fortifying")
+        # end phase 3
+        pass
+
+    def is_game_over(self) -> bool:
+        if self.rules.capitals:
+            # Check if any player controls all capitals
             for player in self.players:
-                move = player.make_move(self.game_state)
-                if self.validate_move(player.id, move):
-                    self.update_game_state(player.id, move)
+                player_territories = (
+                    self.game_state.get_player_territories(player.name))
+                if all(capital in player_territories for 
+                       capital in self.game_state.capitals.values()):
+                    return True  # This player controls all capitals, game over
+        else:
+            # Check if any player controls all territories
+            for player in self.players:
+                player_territories = (
+                    self.game_state.get_player_territories(player.name))
+                if len(player_territories) == len(self.game_state.territories_df):
+                    return True  # This player controls all territories, game over
 
-if __name__ == "__main__":
-    game = GameMaster()
-    game.play_game()
+        return False  # No victory condition met, game continues
+
+    def play_game(self) -> None:
+        while not self.is_game_over():
+            self.game_round += 1
+            # remove any players with no territories
+            # first create a list of players to remove
+            # iteratate through list and remove players
+
+            
+            print(f'Starting round: {self.game_round}')
+            for player in self.active_players:
+                self.play_a_turn(player)
+                # check if the game is over
+                if self.is_game_over():
+                    break
+
+
+        print("Game over")
+        print(f"Player {self.game_state.get_winner()} wins")
+        print(f"Game lasted {self.game_round} rounds")
+
+

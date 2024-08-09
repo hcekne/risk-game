@@ -9,7 +9,8 @@ class GameState:
     def __init__(self, players: List['PlayerAgent']) -> None: 
         self.num_players: int = len(players)
         # Initialize to -1 indicating no player has acted yet
-        self.last_player_index: int = -1  
+        self.last_player_index: int = -1
+        self.capitals: Dict[str, str] = {} # store capitals for each player
         self.territories_df: pd.DataFrame = self._init_territories_df(players)
         self.continent_arrays: Dict[str, np.ndarray] = self._init_continent_arrays()
     
@@ -93,3 +94,12 @@ class GameState:
     def get_player_territories(self, player_name: str) -> List[str]:
         return list(self.territories_df[
             self.territories_df[f'Player_{player_name}'] > 0]['Territory'])
+    
+    def is_capital(self, territory: str) -> bool:
+        # Check if the territory is a capital
+        return territory in self.capitals.values()
+    
+    def set_capital(self, player_name: str, territory: str):
+        # Set the capital for a player
+        self.capitals[player_name] = territory
+     
