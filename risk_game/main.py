@@ -8,14 +8,15 @@ def main():
     ### PHASE 0: Initialize the game
 
     # Initialize the rules
-    rules = Rules(progressive=False, capitals=False, mode="world_domination")
+    rules = Rules(progressive=False, capitals=False, mode="world_domination",
+                  max_rounds=2)
 
     # Initialize the GameMaster with the rules
     game = gm.GameMaster(rules)
 
-    game.add_player(name="Player 1", model_number=1)
-    game.add_player(name="Player 2", model_number=2)
-    game.add_player(name="Player 4", model_number=4)
+    game.add_player(name="Player_Player 1", model_number=1)
+    game.add_player(name="Player_Player 2", model_number=2)
+    game.add_player(name="Player_Player 4", model_number=4)
 
     print(game.players)  # This should now show PlayerAgent objects
     # game.add_player("Player 4")

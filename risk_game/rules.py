@@ -6,11 +6,13 @@ from risk_game.game_utils import CONTINENT_BONUSES
 
 class Rules:
     def __init__(
-            self, progressive: bool = False, 
-            capitals: bool = False, mode: str = "world_domination"):
+            self, progressive: bool = False,
+            capitals: bool = False, mode: str = "world_domination",
+            max_rounds: int = 50):
         self.progressive = progressive
         self.capitals = capitals
         self.mode = mode
+        self.max_rounds = max_rounds
         self.trade_count = 0  # Track the number of trades for progressive mode
 
     def verify_card_combination(self, cards: List[Card]) -> Tuple[bool, int]:
@@ -112,7 +114,7 @@ class Rules:
         
         # Total troops
         total_troops = base_troops + continent_bonus + additional_bonus
-        
+        print(f"rewarding {total_troops} troops for territories to player")
         return total_troops
     
     def calculate_continent_bonus(self, player_territories: List[str]) -> int:
