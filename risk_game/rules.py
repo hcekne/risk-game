@@ -1,5 +1,6 @@
 # rules.py
-from typing import List, Tuple
+from itertools import combinations
+from typing import List, Tuple, Dict
 from risk_game.card_deck import Card
 from risk_game.game_utils import CONTINENT_BONUSES
 
@@ -15,38 +16,45 @@ class Rules:
         self.max_rounds = max_rounds
         self.trade_count = 0  # Track the number of trades for progressive mode
 
-    def verify_card_combination(self, cards: List[Card]) -> Tuple[bool, int]:
+    def verify_card_combination(self, cards: List[Card]
+    ) -> Tuple[bool, int, bool]:
         if len(cards) != 3:
-            return False, 0  # Invalid number of cards
+            return False, 0, False  # Invalid number of cards
 
         # Count the number of each type of card
-        infantry_nr = sum(1 for card in cards if card.troop_type == "infantry")
-        cavalry_nr = sum(1 for card in cards if card.troop_type == "cavalry")
-        artillery_nr = sum(1 for card in cards if card.troop_type == "canon")
-        wildcard_nr = sum(1 for card in cards if card.troop_type == "wild")
+        infantry_nr = sum(1 for card in cards if card.troop_type.lower() == "infantry")
+        cavalry_nr = sum(1 for card in cards if card.troop_type.lower() == "cavalry")
+        artillery_nr = sum(1 for card in cards if card.troop_type.lower() == "canon")
+        wildcard_nr = sum(1 for card in cards if card.troop_type.lower() == "wild")
+
+        # Flag to indicate if a wildcard was used
+        wildcard_used = wildcard_nr > 0
 
         # One of each type (Infantry, Cavalry, Artillery) - consider wildcards
         if (infantry_nr >= 1 and cavalry_nr >= 1 and artillery_nr >= 1) or \
-           (infantry_nr >= 1 and cavalry_nr >= 1 and wildcard_nr >= 1) or \
-           (infantry_nr >= 1 and artillery_nr >= 1 and wildcard_nr >= 1) or \
-           (cavalry_nr >= 1 and artillery_nr >= 1 and wildcard_nr >= 1) or \
-           (infantry_nr == 1 and cavalry_nr == 1 and artillery_nr == 1):
+        (infantry_nr >= 1 and cavalry_nr >= 1 and wildcard_nr >= 1) or \
+        (infantry_nr >= 1 and artillery_nr >= 1 and wildcard_nr >= 1) or \
+        (cavalry_nr >= 1 and artillery_nr >= 1 and wildcard_nr >= 1):
             return (True, 
-                self.calculate_progressive_troops() if self.progressive else 10)
+                self.calculate_progressive_troops() if self.progressive else 10, 
+                wildcard_used)
 
         # Three of a kind (Infantry, Cavalry, or Artillery) - consider wildcards
         if artillery_nr + wildcard_nr == 3:
             return (True, 
-                self.calculate_progressive_troops() if self.progressive else 8)
+                self.calculate_progressive_troops() if self.progressive else 8, 
+                wildcard_used)
         if cavalry_nr + wildcard_nr == 3:
             return (True, 
-                self.calculate_progressive_troops() if self.progressive else 6)
+                self.calculate_progressive_troops() if self.progressive else 6,
+                  wildcard_used)
         if infantry_nr + wildcard_nr == 3:
             return (True, 
-                self.calculate_progressive_troops() if self.progressive else 4)
+                self.calculate_progressive_troops() if self.progressive else 4,
+                  wildcard_used)
 
         # If none of the above, the combination is invalid
-        return False, 0
+        return False, 0, False
     
     def has_valid_combination(self, cards: List[Card]) -> Tuple[bool]:
         if len(cards) < 3:
@@ -132,5 +140,29 @@ class Rules:
                 if game_state.is_capital(territory):
                     additional_bonus += 2
         return additional_bonus     
+    
+    def find_valid_combinations(self, cards: List[Card]
+    ) -> Dict[int, List[List[int]]]:
+        """
+        Finds and sorts all valid card combinations from the given list of cards.
+        
+        Returns:
+        - A dictionary where the keys are troop values and the values are lists of valid combinations.
+        """
+        # don't want to initiate the dictionary with empty lists
+        # want to add to the dictionary as we go
+        valid_combinations = {}  # Store combinations by their troop value
+        
+        # Generate all combinations of three cards
+        for combo in combinations(enumerate(cards, start=1), 3):
+            indices, selected_cards = zip(*combo)
+            is_valid, value, wild = self.verify_card_combination(selected_cards)
+            
+            if is_valid:
+            # Ensure the value key exists in the dictionary, and initialize it with an empty list if not
+                valid_combinations.setdefault(value, []).append(
+                    (list(indices),  wild))
+        
+        return valid_combinations
 
 

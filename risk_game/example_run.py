@@ -53,7 +53,6 @@ game.game_state.territories_df = pd.read_csv('territories.csv')
 
 
 
-
 #print(f'player {game.players[0].name} has {game.players[0].troops} troops')
 
 # if game.validate_move(game.players[0], move):

@@ -140,26 +140,69 @@ class GameMaster:
         # Phase 2: Attack
         # Phase 3: Fortify
 
-    def trade_in_cards(self, player: 'PlayerAgent') -> None:
-        player_cards = self.player_cards[player.name]
-        game_state = self.game_state
-
-        # Ask the player to propose a trade
-        cards_to_trade = player.propose_trade(player_cards, game_state)
-
-        # Verify the proposed trade using the rules instance
-        valid, troops = self.rules.verify_card_combination(cards_to_trade)
-        if valid:
-            # Remove the traded cards from the player's hand
-            for card in cards_to_trade:
-                player_cards.remove(card)
-                self.discarded_card(card)
-
-            # Grant the player the corresponding troops
-            player.troops += troops
-            print(f"{player.name} traded in cards for {troops} extra troops.")
+    def force_trade_in_cards(self, player: 'PlayerAgent') -> None:
+        player_cards = self.player_cards.get(player.name)
+        valid_combinations = self.rules.find_valid_combinations(player_cards)
+        # Make the player propose a trade
+        cards_to_trade, _ = player.must_trade_cards(player_cards,
+            self.game_state, valid_combinations)
+        
+        if cards_to_trade is None:
+            print(f"{player.name} failed to provide valid response to cards.")
+            return
         else:
-            print(f"Invalid trade attempt by {player.name}.")
+            print(cards_to_trade)
+            cards_to_trade
+            selected_cards = [player_cards[i - 1] for i in cards_to_trade]
+            # Verify the proposed trade using the rules instance
+            print(selected_cards)
+        
+            valid, troops, _ = self.rules.verify_card_combination(selected_cards)
+
+            if valid:
+                # Remove the traded cards from the player's hand
+                for card in selected_cards:
+                    player_cards.remove(card)
+                    self.discarded_cards.append(card)
+
+                # Grant the player the corresponding troops
+                player.troops += troops
+                print(f"{player.name} traded in cards for {troops} extra troops.")
+            else:
+                print(f"Invalid trade attempt by {player.name}.")
+
+
+    def ask_to_trade_in_cards(self, player: 'PlayerAgent') -> None:
+        player_cards = self.player_cards.get(player.name)
+        # Ask the player if they want to trade in cards
+        valid_combinations = self.rules.find_valid_combinations(player_cards)
+        cards_to_trade, _ = player.may_trade_cards(player_cards, 
+            self.game_state, valid_combinations)
+        
+        if cards_to_trade is None:
+            print(f"{player.name} failed to provide valid response to cards.")
+            return
+
+        if cards_to_trade.pop() == 0:
+            print(f"{player.name} chose not to trade in cards.")
+            return
+        else:
+            print(cards_to_trade)
+            selected_cards = [player_cards[i - 1] for i in cards_to_trade]
+            # Verify the proposed trade using the rules instance
+            valid, troops, _ = self.rules.verify_card_combination(selected_cards)
+
+            if valid:
+                # Remove the traded cards from the player's hand
+                for card in selected_cards:
+                    player_cards.remove(card)
+                    self.discarded_cards.append(card)
+
+                # Grant the player the corresponding troops
+                player.troops += troops
+                print(f"{player.name} traded in cards for {troops} extra troops.")
+            else:
+                print(f"Invalid trade attempt by {player.name}.")
 
     def phase_1_troop_placement(self, player: 'PlayerAgent')-> None:
         self.phase = 1
@@ -167,15 +210,12 @@ class GameMaster:
         # figure out if the player needs to trade in cards (i.e. has 5 or more cards)
 
         while len(self.player_cards[player.name]) >= 5:
-            self.trade_in_cards(player)
+            self.force_trade_in_cards(player)
         
         if (len(self.player_cards[player.name]) >= 3):
             # check if the player has a set of cards that can be traded in
             if self.rules.has_valid_combination(self.player_cards[player.name]):
-
-            # ask the player if they want to trade in cards and if so trade the 
-                if player.agree_to_trade(self.game_state):
-                    self.trade_in_cards(player)
+                 self.ask_to_trade_in_cards(player)
 
         # figure out how many troops the player gets
         total_troops_from_territories = self.rules.calculate_troops(
@@ -237,6 +277,11 @@ class GameMaster:
             print(f'This is the current game state:----------')
             print(self.game_state.territories_df)
             for player in self.active_players:
+                # distribute some cards to test logic needs to be taken out
+                if self.game_round == 1:
+                    for _ in range(5):
+                        card = self.deck.draw_card(self.discarded_cards)
+                        self.player_cards[player.name].append(card)
                 self.play_a_turn(player)
                 # check if the game is over
                 if self.is_game_over():
@@ -505,3 +550,34 @@ class GameMaster:
             print(f"Reasoning: {reasoning}")
 
         return True  # All moves are valid
+
+    # def print_agent_cards(self, agent_name: str) -> None:
+    #     """
+    #     Prints the cards that an agent has in a structured format.
+
+    #     Parameters:
+    #     - agent_name: The name of the agent.
+
+    #     Example:
+    #     - Player's cards are stored in self.player_cards as a list of Card objects.
+    #     """
+    #     if agent_name not in self.player_cards:
+    #         print(f"No cards found for {agent_name}.")
+    #         return
+
+    #     print(f"{agent_name}'s Cards:")
+    #     for index, card in enumerate(self.player_cards[agent_name], start=1):
+    #         print(f"{index}. {card.territory} {card.troop_type}")
+
+
+    # def get_player_cards(self, player: 'PlayerAgent'
+    #     ) -> Optional[List[Card]]:
+    #     """
+    #     Pass the player's cards to their evaluate_cards method.
+    #     """
+    #     cards = self.player_cards.get(player.name, [])
+    #     if cards:
+    #         return cards
+    #     else:
+    #         return None
+        

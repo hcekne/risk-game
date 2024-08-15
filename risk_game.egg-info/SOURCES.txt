@@ -1,13 +1,15 @@
 README.md
 setup.py
 risk_game/__init__.py
+risk_game/card_deck.py
+risk_game/example_run.py
 risk_game/game_master.py
 risk_game/game_state.py
 risk_game/game_utils.py
+risk_game/main.py
 risk_game/network_utils.py
 risk_game/player_agent.py
 risk_game/rules.py
-risk_game/running_the_game.py
 risk_game.egg-info/PKG-INFO
 risk_game.egg-info/SOURCES.txt
 risk_game.egg-info/dependency_links.txt

@@ -104,7 +104,6 @@ class GameState:
         
         return False
 
-    
     def check_number_of_troops(self, player_name: str, territory: str) -> int:
         controlled = self.territories_df.loc[
             self.territories_df['Territory'] == territory, 
@@ -114,7 +113,6 @@ class GameState:
             return 0
         return controlled.values[0]
     
-
     def update_troops(
         self, player_name: str, 
         territory: Optional[str], num_troops: Optional[int], 
@@ -148,7 +146,6 @@ class GameState:
         
         return strong_territories
     
-
     def get_strong_territories_with_troops(self, player_name: str
         ) -> List[Tuple[str, int]]:
         # Construct the column name for the player
@@ -195,6 +192,8 @@ class GameState:
         for territory, attacking_troops in territories_with_troops:
             # Get the neighbors (adjacent territories) of the current territory
             neighbors = self.territories_graph.get(territory, [])
+
+            print(f'----#-#-#-#-##-Neighbors of {territory}: {neighbors}')
             
             # List to store adjacent territories not under the player's control
             enemy_territories = []
@@ -307,9 +306,73 @@ class GameState:
         else:
             return 'defender', defending_troops
         
+    def format_game_state(self) -> str:
+        # Initialize formatted game state string
+        formatted_game_state = "Current Game State:\n\n"
+        
+        # Iterate through continents using CONTINENT_BONUSES
+        for continent, (territories, bonus) in CONTINENT_BONUSES.items():
+            formatted_game_state += (f"Continent: {continent} (Bonus: " +
+                                    f"{bonus} troops)\n")
+            
+            # Iterate through territories in each continent
+            for territory in territories:
+                row = self.territories_df[(
+                    self.territories_df['Territory'] == territory)].iloc[0]
+                
+                # Identify the player who controls the territory and the number of troops
+                for col in self.territories_df.columns[1:]:  # Skip the 'Territory' column
+                    troops = row[col]
+                    if troops > 0:
+                        player_name = col
+                        formatted_game_state += (
+                            f"  - {territory}: Controlled by {player_name} " +
+                            f"with {troops} troops\n")
+                        break
+            
+            formatted_game_state += "\n"  # Add a blank line between continents
+        
+        return formatted_game_state
+    
+    def format_strong_territories(self, 
+        strong_territories_with_troops: List[Tuple[str, int]], player_name: str
+    ) -> str:
+        formatted_strong_territories = f"Strong Territories for {player_name}:\n\n"
 
+        # Iterate through the list of strong territories and format the output
+        for territory, troops in strong_territories_with_troops:
+            formatted_strong_territories += (
+                f"  - {territory}: {troops} troops available for attack\n"
+            )
+
+        return formatted_strong_territories
     
-    
+    def format_adjacent_enemy_territories(
+        self, adjacent_enemy_territories: Dict[str, List]) -> str:
+        """
+        Format the adjacent enemy territories dictionary into a human-readable string.
+        
+        Parameters:
+        - adjacent_enemy_territories: A dictionary where the keys are the territories and
+        the values are lists containing the number of attacking troops and the list of
+        adjacent enemy territories.
+        
+        Returns:
+        - A formatted string representing the adjacent enemy territories in a human-readable format.
+        """
+        formatted_output = ("The following is list of territories you control " +
+            "and the adjacent enemy territories available to attack:\n\n")
+
+        for territory, (attacking_troops, enemy_territories) in adjacent_enemy_territories.items():
+            formatted_output += f"{territory}:\n"
+            formatted_output += f"  - Maximum Available Attacking Troops: {attacking_troops}\n"
+            if enemy_territories:
+                formatted_output += f"  - Adjacent Enemy Territories: {', '.join(enemy_territories)}\n"
+            else:
+                formatted_output += "  - No adjacent enemy territories.\n"
+            formatted_output += "\n"  # Add a blank line for readability
+        
+        return formatted_output
 
     
 

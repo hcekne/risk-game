@@ -59,21 +59,82 @@ class PlayerAgent:
             print(f'''------__------Error parsing response: ------__------
                   {response}''')
             return [{'territory_name': None, 'num_troops': None}], None, None
+        
+    def parse_card_trade_response(
+        self, move_response: object
+    ) -> Tuple[Optional[List[int]], Optional[str]]:
+        """
+        Parses the player's response regarding card trade suggestions during the Risk card trade phase.
+        
+        Parameters:
+        - move_response: The response object returned by the player agent (e.g., LLM).
+        
+        Returns:
+        - A tuple where:
+        - The first element is a list of card numbers to trade, or None if no trade is suggested.
+        - The second element is an optional string containing reasoning, if provided.
+        """
+        response = move_response.choices[0].message.content.strip()
+
+        # Regular expression to extract card trade suggestions (e.g., ||| 1, 3, 4 |||)
+        trade_match = re.search(r'\|\|\|\s*(0|(?:\d+(?:\s*,\s*\d+)*))\s*\|\|\|', response)
+        
+        # Optional reasoning extraction (if any)
+        reasoning_match = re.search(r'\+\+\+\s*(.+?)\s*\+\+\+', response)
+        
+        trade_cards = None
+        reasoning = None
+
+        # Check if a trade suggestion was found
+        if trade_match:
+            card_numbers = trade_match.group(1)
+            trade_cards = [int(num.strip()) for num in card_numbers.split(',')]
+        
+            # Extract reasoning, if provided
+            if reasoning_match:
+                reasoning = reasoning_match.group(1).strip()
+
+            return trade_cards, reasoning
+        else:
+            print(f'''------__------Error parsing card response: ------__------
+                  {response}''')
+            return trade_cards, reasoning
+        
+    def format_list_of_cards(self, cards: List['Card']) -> str:
+        # Step 1: Convert the list of cards into a formatted string
+        list_of_cards = ""
+        for index, card in enumerate(cards, start=1):
+            list_of_cards += f"{index}. {card.territory} {card.troop_type}\n"
+        return list_of_cards
+  
+    def format_valid_combinations(self, 
+        valid_combinations: Dict[int, List[Tuple[List[int], bool]]]) -> str:
+        formatted_combinations = ""
+        
+        for value, combinations in valid_combinations.items():
+            for combination, wildcard_used in combinations:
+                wildcard_text = "Wildcard used" if wildcard_used else "Wildcard not used"
+                formatted_combinations += f"{value} troops: {combination} ({wildcard_text})\n"
+        
+        return formatted_combinations
+        
+    
 
         
     def make_initial_troop_placement(
             self, game_state: 'GameState') -> str:
         # Implement strategy to make a move
-        game_state_json = game_state.territories_df.to_json()
+        current_game_state = game_state.format_game_state()
         player_territories = game_state.get_player_territories(self.name)
         prompt = f"""
-        We are playing Risk and we are in the troop placement phase.
-        The current game state is {game_state_json}. 
-        You, are {self.name}, and you control the following territories: 
-        {player_territories}. From the list of territories you control, and
-        only from the list of territories you control, please suggest a 
-        move. You can only place one troop. Think carefully
-        about your move and consider also the moves of other players. 
+        We are playing Risk and we are in the initial troop placement phase.
+        You, are {self.name}, and it is your turn. 
+        
+        {current_game_state}. 
+
+        From territories you control, and ONLY from one of the territories 
+        you control, please suggest a move. You can only place one troop. 
+        Think carefully about your move and consider also the moves of other players. 
 
         Your response should be in the following format:
         Move:|||Territory, Number of troops|||
@@ -97,19 +158,21 @@ class PlayerAgent:
 
     def make_troop_placement(
             self, game_state: 'GameState') -> str:
-        game_state_json = game_state.territories_df.to_json()
+        current_game_state = game_state.format_game_state()
         player_territories = game_state.get_player_territories(self.name)
 
         prompt = f"""
-        We are playing Risk and it is your turn. This is the troop placement 
-        phase. The current game state is {game_state_json}. 
-        You, are {self.name}, and you control the following territories: 
-        {player_territories}. From the list of territories you control, and
-        only from the list of territories you control, please suggest your moves.
-        You can place troops on any of the territories you control,
-        and you must place the number of available troops. 
-        You have {self.troops} to place. Think carefully
-        about your move and consider also the moves of other players. 
+        We are playing Risk and we are in the troop placement phase.
+        You, are {self.name}, and it is your turn. 
+        
+        {current_game_state}. 
+        
+        From territories you control, and ONLY from one of the territories 
+        you control, please suggest your moves. You can place troops on any 
+        of the territories you control, and you must place the 
+        number of available troops. You have {self.troops} to place. 
+        Think carefully about your move and consider also the moves of 
+        other players. 
 
         Your response should be in the following format:
 
@@ -148,18 +211,22 @@ class PlayerAgent:
     def make_fortify_move(
             self, game_state: 'GameState') -> str:
         # Implement strategy to make a move
-        game_state_json = game_state.territories_df.to_json()
+        current_game_state = game_state.format_game_state()
         strong_territories = game_state.get_strong_territories(self.name)
         territories_with_troops  = (
             game_state.get_strong_territories_with_troops(self.name))
 
 
         prompt = f"""
+
         We are playing Risk and we are in the troop fortify phase.
-        The current game state is {game_state_json} and you are {self.name}.
+        You, are {self.name}, and it is your turn. 
+        
+        {current_game_state}. 
+
         To choose a territory to fortify from, you need to have more than one 
-        troop in that territory. 
-        The territories you have more than one troop in are: {strong_territories}.
+        troop in that territory. The territories you have more than 
+        one troop in are: {strong_territories}.
         Remember, to fortify is optional and you can choose not to fortify.
 
         If you choose to fortify, choose a territory ONLY from the following
@@ -200,32 +267,37 @@ class PlayerAgent:
     def make_attack_move(
             self, game_state: 'GameState', successful_attacks: int) -> str:
         # Implement strategy to make an attack
-        game_state_json = game_state.territories_df.to_json()
-        strong_territories = game_state.get_strong_territories(self.name)
-        territories_with_troops  = (
+        current_game_state = game_state.format_game_state()
+        strong_territories = (
             game_state.get_strong_territories_with_troops(self.name))
+
+        formated_strong_territories = game_state.format_strong_territories(
+            strong_territories, self.name)
         
-        possible_attach_vectors = (
+        possible_attack_vectors = (
             game_state.get_adjacent_enemy_territories(
-                self.name, territories_with_troops))
+                self.name, strong_territories))
+        
+        formatted_attack_vectors = (
+            game_state.format_adjacent_enemy_territories(possible_attack_vectors))
 
         prompt = f"""
-        We are playing Risk and we are in the attack phase.     
-        The current game state is {game_state_json} and you are {self.name}.
+        We are playing Risk and we are in the attack phase.   
+        You, are {self.name}, and it is your turn. 
+        
+        {current_game_state}. 
+        
         You have had {successful_attacks} successful attacks so far. 
 
-        You can only attack FROM the following territories: {strong_territories}.
+        You can only attack FROM the following territories: 
 
-        The maximum number of troops you can attack with is given by the 
-        following list of tuples containing territories and troop numbers:
-        {territories_with_troops}.
+        {formated_strong_territories}
 
-        The following dictionary contains the territories you can attack FROM, 
-        the maximum number of troops you can attack with and the possible
-        territories you can attack from those territories 
-        {possible_attach_vectors}. Your attack MUST be chosen using one of the 
-        options in this dictionary. (you can chose to attack with less troops 
-        than the maximum number of troops in the dictionary).
+        {formatted_attack_vectors} 
+        
+        Your attack MUST be chosen using one of the  options from the list 
+        above. (you can chose to attack with less troops than the maximum 
+        number of troops in the dictionary).
 
         PRO TIP: When attacking, it is always a good idea to attack with 3 or 
         more troops, because you will have a higher chance of winning the 
@@ -259,6 +331,8 @@ class PlayerAgent:
         reasoning brief, this is very important for the grading of your 
         submission.
         """
+        print(f"---------------This is the attack prompt:----------------")
+        print(prompt)
         parsed_response = (
             self.parse_response_text(
                 self._send_message(
@@ -268,15 +342,81 @@ class PlayerAgent:
         return parsed_response
 
     
-    def propose_trade(self, game_state: 'GameState') -> List[str]:
-        f"""
+    def must_trade_cards(self, cards: List['Card'], game_state: 'GameState',
+        valid_combinations: Dict[int, List[Tuple[List[int], bool]]]
+        ) -> Tuple[Optional[List[int]], Optional[str]]:
+        
+        current_game_state = game_state.format_game_state()
+        formatted_valid_combinations = self.format_valid_combinations(
+            valid_combinations)
+
+        list_of_cards = self.format_list_of_cards(cards)        
+        
+        prompt = f"""
         You are playing Risk and are currently in the card trade phase. 
         The following is a list of cards you have:
 
-        Ural Infantry
-        Afghanistan Cavalry
-        Ontario Infantry
-        Peru Infantry
+        {list_of_cards}
+
+        The following is a list of valid card combinations, the first number
+        is the number of troops you will receive for trading in the cards
+
+        {formatted_valid_combinations}
+
+        You can only choose a combination from the above list of valid 
+        card combinations.
+        
+        Instructions:
+        
+        Objective: Your goal is to decide which set of cards to trade in for 
+        troops. You have 5 or more cards and need to trade cards.
+        
+        Rules:
+        
+        Valid Sets:
+        
+        Three of a Kind: Three cards of the same type (e.g., three Infantry cards).
+        
+        One of Each Type: One Infantry, one Cavalry, and one Artillery card.
+        
+        Wild Cards (if available) can substitute for any type of card.
+        
+        Response Format:
+        
+        Plase espond with the list of card numbers in the format:
+        
+        List of cards to trade ||| [Card Numbers] |||
+
+        Example:
+        List of cards to trade ||| 1, 3, 4 |||
+
+        """
+        print(f"-----------This is the must trade cards prompt:---------------")
+        print(prompt)   
+        parsed_response = (
+            self.parse_card_trade_response(
+                self._send_message(
+                 prompt))
+        )
+
+        return parsed_response
+    
+
+    def may_trade_cards(self, cards: List['Card'], game_state: 'GameState',
+        valid_combinations: Dict[int, List[Tuple[List[int], bool]]]
+        ) -> Tuple[Optional[List[int]], Optional[str]]:
+        
+        current_game_state = game_state.format_game_state()
+        formatted_valid_combinations = self.format_valid_combinations(
+            valid_combinations)
+
+        list_of_cards = self.format_list_of_cards(cards)       
+        
+        prompt = f"""
+        You are playing Risk and are currently in the card trade phase. 
+        The following is a list of cards you have:
+
+        {list_of_cards}
         
         Instructions:
         
@@ -292,6 +432,14 @@ class PlayerAgent:
         One of Each Type: One Infantry, one Cavalry, and one Artillery card.
         
         Wild Cards (if available) can substitute for any type of card.
+
+        The following is a list of valid card combinations, the first number
+        is the number of troops you will receive for trading in the cards
+
+        {formatted_valid_combinations}
+
+        You can ONLY choose a combination from the above list of valid 
+        card combinations.
         
         Strategy Considerations:
         
@@ -318,27 +466,20 @@ class PlayerAgent:
 
         If you decide not to trade any cards, respond with:
         ||| 0 |||
-
-        Example Scenario:
-        Based on the cards provided:
-
-        Ural Infantry
-        Afghanistan Cavalry
-        Ontario Infantry
-        Peru Infantry
         
-        You could potentially trade the three Infantry cards 
-        (cards 1, 3, and 4). However, if you believe that holding onto the 
-        cards will benefit you more in the long run, you can choose not to trade.
-
         """
-        
-        pass
 
-    def agree_to_trade(self, game_state: 'GameState') -> bool:
-        # Implement strategy to agree to a trade
-        # return True if the player agrees to the trade, False otherwise
-        pass
+        print(f"-----------This is the may trade cards prompt:---------------")
+        print(prompt)   
+
+        parsed_response = (
+            self.parse_card_trade_response(
+                self._send_message(
+                 prompt))
+        )
+
+        return parsed_response
+        
     
     def choose_capital(self, game_state: 'GameState') -> str:
         # Implement strategy to choose a capital
