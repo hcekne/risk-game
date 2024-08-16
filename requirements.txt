@@ -4,6 +4,8 @@ ipython
 matplotlib
 mypy
 numpy
+openai
 pandas
 pytest
+requests
 seaborn

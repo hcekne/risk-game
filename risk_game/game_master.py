@@ -439,7 +439,7 @@ class GameMaster:
         
         if territory == 'Blank' or num_troops == 0:
             print("Choosing to not fortify")
-            return True  # Blank move is valid
+            return True, None  # Blank move is valid
 
         if not self.game_state.check_terr_control(
             player.name, territory):
@@ -519,8 +519,8 @@ class GameMaster:
                 player.make_attack_move(self.game_state, successful_attacks, 
                                         error_msg)
             ) 
-            print(f"Proposed attack: {move} from {from_territory}, " +
-                  f"Reasoning: {reasoning}")
+            # print(f"Proposed attack: {move} from {from_territory}, " +
+            #       f"Reasoning: {reasoning}")
             
             is_valid, error_msg = self.validate_attack_move(
                 player, move, reasoning, from_territory)
@@ -566,7 +566,7 @@ class GameMaster:
         
         if territory == 'Blank' or num_troops == 0:
             print("Choosing to not attack!!")
-            return True  # Blank move is valid
+            return True, None  # Blank move is valid
 
         if self.game_state.check_terr_control(
             player.name, territory):
@@ -600,7 +600,8 @@ class GameMaster:
 
         # Optionally handle reasoning here
         if reasoning:
-            print(f"Reasoning: {reasoning}")
+            # print(f"Reasoning: {reasoning}")
+            pass
 
         return True, None  # All moves are valid
 
