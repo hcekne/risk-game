@@ -193,7 +193,7 @@ class GameState:
             # Get the neighbors (adjacent territories) of the current territory
             neighbors = self.territories_graph.get(territory, [])
 
-            print(f'----#-#-#-#-##-Neighbors of {territory}: {neighbors}')
+            # print(f'----#-#-#-#-##-Neighbors of {territory}: {neighbors}')
             
             # List to store adjacent territories not under the player's control
             enemy_territories = []

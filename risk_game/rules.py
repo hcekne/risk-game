@@ -16,19 +16,28 @@ class Rules:
         self.max_rounds = max_rounds
         self.trade_count = 0  # Track the number of trades for progressive mode
 
-    def verify_card_combination(self, cards: List[Card]
+    def verify_card_combination(self, cards: List[Card], player_name: str, 
+        game_state: "GameState"
     ) -> Tuple[bool, int, bool]:
         if len(cards) != 3:
             return False, 0, False  # Invalid number of cards
 
         # Count the number of each type of card
-        infantry_nr = sum(1 for card in cards if card.troop_type.lower() == "infantry")
-        cavalry_nr = sum(1 for card in cards if card.troop_type.lower() == "cavalry")
-        artillery_nr = sum(1 for card in cards if card.troop_type.lower() == "canon")
-        wildcard_nr = sum(1 for card in cards if card.troop_type.lower() == "wild")
+        infantry_nr = sum(1 for card in cards if card.troop_type == "infantry")
+        cavalry_nr = sum(1 for card in cards if card.troop_type == "cavalry")
+        artillery_nr = sum(1 for card in cards if card.troop_type == "canon")
+        wildcard_nr = sum(1 for card in cards if card.troop_type == "wild")
 
         # Flag to indicate if a wildcard was used
         wildcard_used = wildcard_nr > 0
+
+        # Determine if the player controls any of the territories on the cards
+        bonus_troop = 0
+        for card in cards:
+            if (card.troop_type != "wild" and 
+                game_state.check_terr_control(player_name, card.territory)):
+                bonus_troop = 1
+                break  # Only need one bonus troop, so we can stop checking
 
         # One of each type (Infantry, Cavalry, Artillery) - consider wildcards
         if (infantry_nr >= 1 and cavalry_nr >= 1 and artillery_nr >= 1) or \
@@ -36,22 +45,22 @@ class Rules:
         (infantry_nr >= 1 and artillery_nr >= 1 and wildcard_nr >= 1) or \
         (cavalry_nr >= 1 and artillery_nr >= 1 and wildcard_nr >= 1):
             return (True, 
-                self.calculate_progressive_troops() if self.progressive else 10, 
+                (self.calculate_progressive_troops() if self.progressive else 10) + bonus_troop, 
                 wildcard_used)
 
         # Three of a kind (Infantry, Cavalry, or Artillery) - consider wildcards
         if artillery_nr + wildcard_nr == 3:
             return (True, 
-                self.calculate_progressive_troops() if self.progressive else 8, 
+                (self.calculate_progressive_troops() if self.progressive else 8) + bonus_troop, 
                 wildcard_used)
         if cavalry_nr + wildcard_nr == 3:
             return (True, 
-                self.calculate_progressive_troops() if self.progressive else 6,
-                  wildcard_used)
+                (self.calculate_progressive_troops() if self.progressive else 6) + bonus_troop,
+                wildcard_used)
         if infantry_nr + wildcard_nr == 3:
             return (True, 
-                self.calculate_progressive_troops() if self.progressive else 4,
-                  wildcard_used)
+                (self.calculate_progressive_troops() if self.progressive else 4) + bonus_troop,
+                wildcard_used)
 
         # If none of the above, the combination is invalid
         return False, 0, False
@@ -141,7 +150,8 @@ class Rules:
                     additional_bonus += 2
         return additional_bonus     
     
-    def find_valid_combinations(self, cards: List[Card]
+    def find_valid_combinations(self, cards: List[Card], player_name: str, 
+        game_state: "GameState"
     ) -> Dict[int, List[List[int]]]:
         """
         Finds and sorts all valid card combinations from the given list of cards.
@@ -156,7 +166,8 @@ class Rules:
         # Generate all combinations of three cards
         for combo in combinations(enumerate(cards, start=1), 3):
             indices, selected_cards = zip(*combo)
-            is_valid, value, wild = self.verify_card_combination(selected_cards)
+            is_valid, value, wild = self.verify_card_combination(
+                selected_cards, player_name, game_state)
             
             if is_valid:
             # Ensure the value key exists in the dictionary, and initialize it with an empty list if not

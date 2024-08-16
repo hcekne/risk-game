@@ -10,6 +10,11 @@ class PlayerAgent:
         self.agent_model = GroqClient(model_number)
         self.include_reasoning: bool = True
         self.troops: int = 0
+        self.turn_strategy: str = ""
+        self.troop_placement_errors: int = 0
+        self.return_formatting_errors: int = 0
+        self.attack_errors: int = 0
+        self.fortify_errors: int = 0
     
     def _send_message(self, message_content: str) -> str:
         messages = [
@@ -19,6 +24,11 @@ class PlayerAgent:
             }
         ]
         return self.agent_model.get_chat_completion(messages)
+    
+    def parse_response_strategy(self, move_response: object) -> str:
+        response = move_response.choices[0].message.content
+        response = response[:1200]
+        return response
 
     def parse_response_text(
         self, move_response: object
@@ -35,7 +45,7 @@ class PlayerAgent:
         reasoning = None
         from_territory = None
 
-        print(f"move_matches: {move_matches}")  # Debugging print
+        # print(f"move_matches: {move_matches}")  # Debugging print
         # print(f"reasoning_match: {reasoning_match}")  # Debugging print
         # print(f"from_territory_match: {from_territory_match}")  # Debugging print
 
@@ -50,14 +60,16 @@ class PlayerAgent:
 
             if reasoning_match:
                 reasoning = reasoning_match.group(1).strip()
+                reasoning = reasoning[:1200]
 
             if from_territory_match:
                 from_territory = from_territory_match.group(1).strip()
 
             return moves, reasoning, from_territory
         else:
-            print(f'''------__------Error parsing response: ------__------
-                  {response}''')
+            response = response[:1200]
+            print(f"------__------Error parsing response: ------__------" +
+                  f"{response}")
             return [{'territory_name': None, 'num_troops': None}], None, None
         
     def parse_card_trade_response(
@@ -93,11 +105,13 @@ class PlayerAgent:
             # Extract reasoning, if provided
             if reasoning_match:
                 reasoning = reasoning_match.group(1).strip()
+                reasoning = reasoning[:1200]
 
             return trade_cards, reasoning
         else:
-            print(f'''------__------Error parsing card response: ------__------
-                  {response}''')
+            response = response[:1200]
+            print(f"------__------Error parsing response: ------__------" +
+                  f"{response}")
             return trade_cards, reasoning
         
     def format_list_of_cards(self, cards: List['Card']) -> str:
@@ -118,19 +132,24 @@ class PlayerAgent:
         
         return formatted_combinations
         
-    
-
         
     def make_initial_troop_placement(
-            self, game_state: 'GameState') -> str:
+            self, game_state: 'GameState', error_msg: Optional[str] = None
+    ) -> str:
         # Implement strategy to make a move
         current_game_state = game_state.format_game_state()
         player_territories = game_state.get_player_territories(self.name)
         prompt = f"""
         We are playing Risk and we are in the initial troop placement phase.
         You, are {self.name}, and it is your turn. 
-        
-        {current_game_state}. 
+        """
+        if error_msg:
+             prompt += (f"Your last move was invalid:\n {error_msg} \nPlease " +
+             f"try again and DON'T make the same mistake.\n")
+
+
+        prompt += f"""
+        {current_game_state}
 
         From territories you control, and ONLY from one of the territories 
         you control, please suggest a move. You can only place one troop. 
@@ -157,16 +176,23 @@ class PlayerAgent:
     
 
     def make_troop_placement(
-            self, game_state: 'GameState') -> str:
+            self, game_state: 'GameState',  error_msg: Optional[str] = None
+    ) -> str:
         current_game_state = game_state.format_game_state()
         player_territories = game_state.get_player_territories(self.name)
 
         prompt = f"""
         We are playing Risk and we are in the troop placement phase.
         You, are {self.name}, and it is your turn. 
-        
-        {current_game_state}. 
-        
+        """
+        if error_msg:
+             prompt += (f"Your last move was invalid:\n {error_msg} \nPlease " +
+             f"try again and DON'T make the same mistake.\n")
+
+
+        prompt += f"""
+        {current_game_state}
+
         From territories you control, and ONLY from one of the territories 
         you control, please suggest your moves. You can place troops on any 
         of the territories you control, and you must place the 
@@ -209,7 +235,8 @@ class PlayerAgent:
         return parsed_response
     
     def make_fortify_move(
-            self, game_state: 'GameState') -> str:
+            self, game_state: 'GameState', error_msg: Optional[str] = None
+    ) -> str:
         # Implement strategy to make a move
         current_game_state = game_state.format_game_state()
         strong_territories = game_state.get_strong_territories(self.name)
@@ -218,11 +245,20 @@ class PlayerAgent:
 
 
         prompt = f"""
-
         We are playing Risk and we are in the troop fortify phase.
         You, are {self.name}, and it is your turn. 
-        
-        {current_game_state}. 
+
+        """
+
+        if error_msg:
+             prompt += (f"Your last move was invalid:\n {error_msg} \nPlease " +
+             f"try again and DON'T make the same mistake.\n")
+
+
+        prompt += f"""
+        {current_game_state}
+
+        Your current strategy for this turn is: {self.turn_strategy}
 
         To choose a territory to fortify from, you need to have more than one 
         troop in that territory. The territories you have more than 
@@ -265,14 +301,13 @@ class PlayerAgent:
         return parsed_response
 
     def make_attack_move(
-            self, game_state: 'GameState', successful_attacks: int) -> str:
+            self, game_state: 'GameState', successful_attacks: int, 
+            error_msg: Optional[str] = None
+    ) -> str:
         # Implement strategy to make an attack
         current_game_state = game_state.format_game_state()
         strong_territories = (
             game_state.get_strong_territories_with_troops(self.name))
-
-        formated_strong_territories = game_state.format_strong_territories(
-            strong_territories, self.name)
         
         possible_attack_vectors = (
             game_state.get_adjacent_enemy_territories(
@@ -284,18 +319,24 @@ class PlayerAgent:
         prompt = f"""
         We are playing Risk and we are in the attack phase.   
         You, are {self.name}, and it is your turn. 
-        
-        {current_game_state}. 
-        
+
+        """
+
+        if error_msg:
+             prompt += (f"Your last move was invalid:\n {error_msg} \nPlease " +
+             f"try again and DON'T make the same mistake.\n")
+
+
+        prompt += f"""
+        {current_game_state}
+
         You have had {successful_attacks} successful attacks so far. 
 
-        You can only attack FROM the following territories: 
-
-        {formated_strong_territories}
+        Your current strategy for this turn is: {self.turn_strategy}
 
         {formatted_attack_vectors} 
-        
-        Your attack MUST be chosen using one of the  options from the list 
+
+        Your attack MUST be chosen using one of the options from the list 
         above. (you can chose to attack with less troops than the maximum 
         number of troops in the dictionary).
 
@@ -318,11 +359,12 @@ class PlayerAgent:
         Attack Opponent Territory:|||Brazil, 3|||
         From Territory:###Argentina###
 
-        Reasoning:+++I want to attack Brazil with 3 troops from Argentina because it will help give me control over South America+++
+        Reasoning:+++I want to attack Brazil with 3 troops from Argentina
+        because it will help give me control over South America+++
 
-        If you are finished attacking, or don't want to attack this turn,
+        When you are finished attacking, or don't want to attack this turn,
         you can provide the following response:
-        
+
         Attack Opponent Territory:|||Blank, 0|||
         From Territory:###Blank###
         Reasoning:+++I am finished attacking because I don't want to overextend+++
@@ -331,8 +373,8 @@ class PlayerAgent:
         reasoning brief, this is very important for the grading of your 
         submission.
         """
-        print(f"---------------This is the attack prompt:----------------")
-        print(prompt)
+        # print(f"---------------This is the attack prompt:----------------")
+        # print(prompt)
         parsed_response = (
             self.parse_response_text(
                 self._send_message(
@@ -345,8 +387,7 @@ class PlayerAgent:
     def must_trade_cards(self, cards: List['Card'], game_state: 'GameState',
         valid_combinations: Dict[int, List[Tuple[List[int], bool]]]
         ) -> Tuple[Optional[List[int]], Optional[str]]:
-        
-        current_game_state = game_state.format_game_state()
+
         formatted_valid_combinations = self.format_valid_combinations(
             valid_combinations)
 
@@ -365,34 +406,34 @@ class PlayerAgent:
 
         You can only choose a combination from the above list of valid 
         card combinations.
-        
+
         Instructions:
-        
+
         Objective: Your goal is to decide which set of cards to trade in for 
         troops. You have 5 or more cards and need to trade cards.
-        
+
         Rules:
-        
+
         Valid Sets:
-        
+
         Three of a Kind: Three cards of the same type (e.g., three Infantry cards).
-        
+
         One of Each Type: One Infantry, one Cavalry, and one Artillery card.
-        
+
         Wild Cards (if available) can substitute for any type of card.
-        
+
         Response Format:
-        
+
         Plase espond with the list of card numbers in the format:
-        
+
         List of cards to trade ||| [Card Numbers] |||
 
         Example:
         List of cards to trade ||| 1, 3, 4 |||
 
         """
-        print(f"-----------This is the must trade cards prompt:---------------")
-        print(prompt)   
+        # print(f"-----------This is the must trade cards prompt:---------------")
+        # print(prompt)   
         parsed_response = (
             self.parse_card_trade_response(
                 self._send_message(
@@ -417,20 +458,20 @@ class PlayerAgent:
         The following is a list of cards you have:
 
         {list_of_cards}
-        
+
         Instructions:
-        
+
         Objective: Your goal is to decide whether to trade in a set of three 
         cards or to hold onto your cards for future turns.
-        
+
         Rules:
-        
+
         Valid Sets:
-        
+
         Three of a Kind: Three cards of the same type (e.g., three Infantry cards).
-        
+
         One of Each Type: One Infantry, one Cavalry, and one Artillery card.
-        
+
         Wild Cards (if available) can substitute for any type of card.
 
         The following is a list of valid card combinations, the first number
@@ -440,37 +481,40 @@ class PlayerAgent:
 
         You can ONLY choose a combination from the above list of valid 
         card combinations.
-        
+
         Strategy Considerations:
-        
+
         Maximize Troop Gain: Trading in a set of cards will provide you with 
         additional troops. Consider whether the trade will significantly 
         strengthen your position.
-        
+
         Hold for Later: Sometimes it may be better to hold onto your cards to 
         create a stronger set in future turns, especially if you are not in 
         immediate need of additional troops.
-        
-        Opponent Awareness: Consider the state of your opponents. If they are weak or you have a strategic advantage, it might be worth trading in cards to press your advantage. Conversely, if you are in a strong position, holding cards for later might be more beneficial.
-        
-        
+
+        Opponent Awareness: Consider the state of your opponents. 
+        If they are weak or you have a strategic advantage, it might be 
+        worth trading in cards to press your advantage. Conversely, 
+        if you are in a strong position, holding cards for later might 
+        be more beneficial.
+
         Response Format:
-        
+
         If you decide to trade in a set of cards, respond with the list of 
         card numbers in the format:
-        
-        List of cards to trade ||| [Card Numbers] |||
+
+        List of cards to trade ||| Card Numbers (separated by commas) |||
 
         Example:
         List of cards to trade ||| 1, 3, 4 |||
 
         If you decide not to trade any cards, respond with:
         ||| 0 |||
-        
+
         """
 
-        print(f"-----------This is the may trade cards prompt:---------------")
-        print(prompt)   
+        # print(f"-----------This is the may trade cards prompt:---------------")
+        # print(prompt)   
 
         parsed_response = (
             self.parse_card_trade_response(
@@ -485,4 +529,96 @@ class PlayerAgent:
         # Implement strategy to choose a capital
         # return the name of the capital
         pass
+
+    def define_strategy_for_move(self, game_state: 'GameState') -> None:
+        # Implement strategy to make a move
+        strong_territories = (
+            game_state.get_strong_territories_with_troops(self.name))
+        
+        possible_attack_vectors = (
+            game_state.get_adjacent_enemy_territories(
+                self.name, strong_territories))
+        
+        formatted_attack_vectors = (
+            game_state.format_adjacent_enemy_territories(possible_attack_vectors))
+
+
+        prompt = """
+        We are playing Risk and you are starting your turn. 
+        You, are {self.name}, and it is your turn. 
+
+        {current_game_state}
+
+        {formatted_attack_vectors}
+
+        Your task is to formulate an overall strategy for your turn, 
+        considering the territories you control, the other players, and the 
+        potential for continent bonuses.
+
+        **Objective:**
+
+        Your goal this turn is to maximize your position by:
+        - Securing continent bonuses by acquiring key territories.
+        - Weakening your strongest opponents to prevent them from gaining continent bonuses.
+        - **Eliminating opponents** when the opportunity arises, which will 
+        allow you to gain their cards. This can be especially advantageous 
+        when playing with progressive card bonuses, as you could potentially 
+        trade in cards for a significant troop boost.
+
+        **Strategic Considerations:**
+
+        1. **Attack Strategy:**
+        - Identify the most advantageous territories to attack.
+        - Prioritize attacks that will help you secure continent bonuses or 
+        weaken your strongest opponents.
+        - Look for opportunities to eliminate other players. If an opponent 
+        has few territories left, eliminating them could allow you to gain 
+        their cards, which can be especially powerful if you’re playing with 
+        progressive card bonuses.
+        - Weigh the risks of attacking versus the potential rewards.
+
+        2. **Defense Strategy:**
+        - Identify your most vulnerable territories and consider fortifying them.
+        - Consider the potential moves of your opponents and plan your defense 
+        accordingly.
+
+
+        **Instructions:**
+
+        - **Limit your response to a maximum of 300 words.**
+        - **Be concise and direct. Avoid unnecessary elaboration.**
+        - **Provide your strategy in two bullet points, each with a maximum of four sentences.**
+
+        **Output Format:**
+
+        Provide a high-level strategy for your turn, including:
+        1. **Attack Strategy:** Which territories will you target, and why? 
+        How many troops will you commit to each attack? If you plan to 
+        eliminate an opponent, explain how you will accomplish this.
+        2. **Defense Strategy:** Which territories will you fortify, and 
+        how will you allocate your remaining troops?
+
+        Example Strategy:
+        - **Attack Strategy:** Attack {Territory B} from {Territory C} with 
+        10 troops to weaken Player 1 and prevent them from securing the 
+        continent bonus for {Continent Y}. Eliminate Player 2 by attacking 
+        their last remaining territory, {Territory D}, to gain their cards.
+        - **Defense Strategy:** Fortify {Territory E} with 3 troops to 
+        protect against a potential counter-attack from Player 3.
+
+        Remember, your goal is to make the best strategic decisions that
+            will maximize your chances of winning the game. Consider the 
+            potential moves of your opponents and how you can position 
+            yourself to counter them effectively.
+
+        What is your strategy for this turn?
+        """
+        parsed_response = (
+            self.parse_response_strategy(
+                self._send_message(
+                 prompt))
+        )
+        
+
+        self.turn_strategy = parsed_response
 

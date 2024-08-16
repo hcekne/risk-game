@@ -85,15 +85,18 @@ class GameMaster:
         print(f"Territory: {territory}, Num troops: {num_troops}")
         if territory is None or num_troops is None:
             print(f"Error: Territory or num_troops is None")
+            player.return_formatting_errors += 1
             return False
         if not self.game_state.check_terr_control(player.name, territory):
             print(f"Error: {player.name} does not control territory {territory}")
+            player.troop_placement_errors += 1
             return False
         if num_troops > player.troops:
             print(f'''
                   Error: Not enough troops to place. {player.name} has only 
                   {player.troops} troop(s) left.'''
             )
+            player.troop_placement_errors += 1
             return False
         return True
 
@@ -142,7 +145,8 @@ class GameMaster:
 
     def force_trade_in_cards(self, player: 'PlayerAgent') -> None:
         player_cards = self.player_cards.get(player.name)
-        valid_combinations = self.rules.find_valid_combinations(player_cards)
+        valid_combinations = self.rules.find_valid_combinations(
+            player_cards,player.name, self.game_state)
         # Make the player propose a trade
         cards_to_trade, _ = player.must_trade_cards(player_cards,
             self.game_state, valid_combinations)
@@ -157,7 +161,8 @@ class GameMaster:
             # Verify the proposed trade using the rules instance
             print(selected_cards)
         
-            valid, troops, _ = self.rules.verify_card_combination(selected_cards)
+            valid, troops, _ = self.rules.verify_card_combination(
+                selected_cards, player.name, self.game_state)
 
             if valid:
                 # Remove the traded cards from the player's hand
@@ -175,7 +180,8 @@ class GameMaster:
     def ask_to_trade_in_cards(self, player: 'PlayerAgent') -> None:
         player_cards = self.player_cards.get(player.name)
         # Ask the player if they want to trade in cards
-        valid_combinations = self.rules.find_valid_combinations(player_cards)
+        valid_combinations = self.rules.find_valid_combinations(
+            player_cards, player.name, self.game_state)
         cards_to_trade, _ = player.may_trade_cards(player_cards, 
             self.game_state, valid_combinations)
         
@@ -190,7 +196,8 @@ class GameMaster:
             print(cards_to_trade)
             selected_cards = [player_cards[i - 1] for i in cards_to_trade]
             # Verify the proposed trade using the rules instance
-            valid, troops, _ = self.rules.verify_card_combination(selected_cards)
+            valid, troops, _ = self.rules.verify_card_combination(
+                selected_cards,player.name, self.game_state)
 
             if valid:
                 # Remove the traded cards from the player's hand
@@ -207,8 +214,10 @@ class GameMaster:
     def phase_1_troop_placement(self, player: 'PlayerAgent')-> None:
         self.phase = 1
         player.troops = 0
-        # figure out if the player needs to trade in cards (i.e. has 5 or more cards)
+        # Make the player define a strategy for the turn
+        player.define_strategy_for_move(self.game_state)
 
+        # figure out if the player needs to trade in cards (i.e. has 5 or more cards)
         while len(self.player_cards[player.name]) >= 5:
             self.force_trade_in_cards(player)
         
@@ -226,7 +235,6 @@ class GameMaster:
         self.ensure_valid_move(player)
 
         # end phase 1
-        pass
 
     def phase_2_attack(self, player: 'PlayerAgent')-> None:
         self.phase = 2
@@ -301,7 +309,7 @@ class GameMaster:
         self, player: 'PlayerAgent', 
         moves: List[Dict[str, int]], 
         reasoning: Optional[str] = None
-    ) -> bool:
+    ) -> Tuple[bool, Optional[str]]:
         total_troops = 0
 
         for move in moves:
@@ -312,77 +320,106 @@ class GameMaster:
             #      Num troops: {num_troops}''')
 
             if territory is None or num_troops is None:
-                print("Error: Territory or num_troops is None")
-                return False
+                error_msg = f"Error: Territory or num_troops is None"
+                print(error_msg)
+                return False, error_msg
 
             if not self.game_state.check_terr_control(player.name, territory):
-                print(f"Error: {player.name} does not control territory {territory}")
-                return False
+                error_msg = (f"Error: {player.name} does not control territory " +
+                            f"{territory}")
+                print(error_msg)
+                return False, error_msg
 
             total_troops += num_troops
 
         if total_troops > player.troops:
-            print(f'''
-            Error: Not enough troops to place. {player.name} has only 
-            {player.troops} troop(s) left but trying to place {total_troops}.'''
-            )
-            return False
+            error_msg = (
+            f"Error: Not enough troops to place. {player.name} has only " + 
+            f"{player.troops} troop(s) left but trying to place {total_troops}.")
+            print(error_msg)
+            return False, error_msg
 
         if total_troops < player.troops:
-            print(f'''
-            Error: Not placing all troops. {player.name} is trying to place
-            {total_troops} troop(s) but has  {player.troops}.'''
-            )
-            return False
+            error_msg = (
+            f"Error: Not placing all troops. {player.name} is trying to place " +
+            f"{total_troops} troop(s) but has {player.troops}.")
+            print(error_msg)
+            return False, error_msg
 
         # Optionally handle reasoning here
         if reasoning:
             # print(f"Reasoning: {reasoning}")
             pass
 
-        return True  # All moves are valid
+        return True, None  # All moves are valid
 
     def ensure_valid_move(
         self, player: 'PlayerAgent')-> None:
         valid_move = False
+        invalid_moves = 0
+        erro_msg = None
+
         while not valid_move:
             if self.phase == 0:
                 # Phase 0: Initial troop placement 
                 # (single move treated as a list with one move)
                 moves, reasoning, _  = (
-                    player.make_initial_troop_placement(self.game_state))
+                    player.make_initial_troop_placement(self.game_state, erro_msg))
             elif self.phase == 1:
                 # Phase 1: Troop placement (multiple moves)
                 moves, reasoning, _ = (
-                    player.make_troop_placement(self.game_state))
+                    player.make_troop_placement(self.game_state, erro_msg))
             else:
                 raise ValueError(f"Unknown phase: {self.phase}")
+            
+            # Validate the moves
+            is_valid, error_msg = self.validate_move(player, moves, reasoning)
 
-            #print(f"Proposed moves: {moves}, Reasoning: {reasoning}")
-            if self.validate_move(player, moves, reasoning):
+            if is_valid:
                 print("Moves are valid")
                 self.update_game_state_for_multiple_moves(player, moves)
                 self.reduce_player_troops_for_multiple_moves(player, moves)
                 valid_move = True
+            elif invalid_moves >= 3:
+                print("Too many invalid moves, random troop placement turn")
+                moves = self.generate_random_troop_placementplayer(
+                    player, self.game_state) 
+                reasoning = "Random troop placement"
+
+                is_valid, error_msg = self.validate_move(player, moves, reasoning)
+
+                if self.validate_move(player, moves, reasoning):
+                    print("Random moves are valid")
+                    self.update_game_state_for_multiple_moves(player, moves)
+                    self.reduce_player_troops_for_multiple_moves(player, moves)
+                    valid_move = True
+                else:
+                    raise ValueError("Random troop placement failed")
+                
             else:
-                print("Moves are invalid, asking for new moves")
+                print(f"Moves are invalid: {error_msg}, asking for new moves")
+                invalid_moves += 1
 
     def ensure_valid_fortify_move(
         self, player: 'PlayerAgent')-> None:
         fortify_tries = 0
+        error_msg = None
+
         while fortify_tries < 3:
             moves, reasoning, from_territory = (
-                player.make_fortify_move(self.game_state)
+                player.make_fortify_move(self.game_state, error_msg)
             ) 
             # print(f"Proposed moves: {moves}, Reasoning: {reasoning}")
-            if self.validate_fortify_move(
-                player, moves,reasoning, from_territory):
+            is_valid, error_msg = self.validate_fortify_move(
+                player, moves, reasoning, from_territory)
+
+            if is_valid:
                 print("Moves are valid")
                 self.update_game_state_for_fortify_move(
                     player, moves, from_territory)
                 fortify_tries = 4  # Exit the loop
             else:
-                print("Moves are invalid, asking for new moves")
+                print(f"Moves are invalid,\n{error_msg}\n Asking for new moves")
                 fortify_tries += 1
     
     def validate_fortify_move(
@@ -390,14 +427,15 @@ class GameMaster:
         moves: List[Dict[str, int]], 
         reasoning: Optional[str] = None,
         from_territory: Optional[str] = None
-    ) -> bool:
+    ) -> Tuple[bool, Optional[str]]:
        
         territory = moves[0].get('territory_name')
         num_troops = moves[0].get('num_troops')
 
         if territory is None or num_troops is None:
-            print("Error: Territory or num_troops is None")
-            return False
+            error_msg = f"Error: Territory or num_troops is None"
+            print(error_msg)
+            return False, error_msg
         
         if territory == 'Blank' or num_troops == 0:
             print("Choosing to not fortify")
@@ -405,36 +443,40 @@ class GameMaster:
 
         if not self.game_state.check_terr_control(
             player.name, territory):
-            print(f'''Error: {player.name} does not control to 
-                    territory {territory}''')
-            return False
+            error_msg = (f"Error: {player.name} does not control to " +
+                    f"territory {territory}")
+            print(error_msg)
+            return False ,error_msg
             
         if not self.game_state.check_terr_control(
             player.name, from_territory):
-            print(f"Error: {player.name} does not control from " +
-                f"territory {territory}")
-            return False
+            error_msg = (f"Error: {player.name} does not control from " +
+                    f"territory {territory}")
+            print(error_msg)
+            return False ,error_msg
         
         from_territory_troops = self.game_state.check_number_of_troops(
             player.name, from_territory) 
 
         if num_troops >= from_territory_troops:
-            print(f"Error: Not enough troops to fortify. {player.name} has " +
-            f"only {from_territory_troops} troop(s) in {from_territory} but " +
-            f"trying to move {num_troops}.")
-            return False
+            error_msg = (f"Error: Not enough troops to fortify. {player.name} " +
+            f"has only {from_territory_troops} troop(s) in {from_territory} " +
+            f"but trying to move {num_troops}.")
+            print(error_msg)
+            return False ,error_msg
         
         # Check if the territories are connected
         if not self.game_state.are_territories_connected(
             player.name, from_territory, territory):
-            print(f"Error: Territories are not connected")
-            return False
+            error_msg = f"Error: Territories are not connected"
+            print(error_msg)
+            return False ,error_msg
 
         # Optionally handle reasoning here
         if reasoning:
             print(f"Reasoning: {reasoning}")
 
-        return True  # All moves are valid
+        return True, None  # All moves are valid
     
     def update_game_state_for_fortify_move(
         self, player: 'PlayerAgent', moves: List[Dict[str, int]],
@@ -470,14 +512,20 @@ class GameMaster:
         invalid_attacks = 0
         lost_attacks = 0
         successful_attacks = 0
+        error_msg = None
+
         while invalid_attacks < 3:
             move, reasoning, from_territory = (
-                player.make_attack_move(self.game_state, successful_attacks)
+                player.make_attack_move(self.game_state, successful_attacks, 
+                                        error_msg)
             ) 
             print(f"Proposed attack: {move} from {from_territory}, " +
                   f"Reasoning: {reasoning}")
-            if self.validate_attack_move(
-                player, move, reasoning, from_territory):
+            
+            is_valid, error_msg = self.validate_attack_move(
+                player, move, reasoning, from_territory)
+
+            if is_valid:
                 print("Moves are valid")
                 # calculate the outcome of the attack
                 outcome = self.game_state.update_game_state_for_attack_move(
@@ -493,8 +541,8 @@ class GameMaster:
                     lost_attacks += 1
                 
             else:
-                print("Moves are invalid, asking for new moves")
                 invalid_attacks += 1
+                print(f"Moves are invalid:\n{error_msg}\nAsking for new moves")
         return successful_attacks
 
     def validate_attack_move(
@@ -502,7 +550,7 @@ class GameMaster:
         move: List[Dict[str, int]], 
         reasoning: Optional[str] = None,
         from_territory: Optional[str] = None
-    ) -> bool:
+    ) -> Tuple[bool, Optional[str]]:    
         total_troops = 0
        
         territory = move[0].get('territory_name')
@@ -512,8 +560,9 @@ class GameMaster:
         #        Num troops: {num_troops}''')
 
         if territory is None or num_troops is None:
-            print("Error: Territory or num_troops is None")
-            return False
+            error_msg = f"Error: Territory or num_troops is None"
+            print(error_msg)
+            return False, error_msg
         
         if territory == 'Blank' or num_troops == 0:
             print("Choosing to not attack!!")
@@ -521,63 +570,84 @@ class GameMaster:
 
         if self.game_state.check_terr_control(
             player.name, territory):
-            print(f"Error: {player.name} already controls " +
+            error_msg = (f"Error: {player.name} already controls " +
                   f"territory {territory}")
-            return False
+            print(error_msg)
+            return False, error_msg
             
         if not self.game_state.check_terr_control(
             player.name, from_territory):
-            print(f"Error: {player.name} does not control from " +
+            error_msg = (f"Error: {player.name} does not control from " +
                 f"territory {territory}")
-            return False
+            print(error_msg)
+            return False, error_msg
         
         from_territory_troops = self.game_state.check_number_of_troops(
             player.name, from_territory) 
 
         if num_troops >= from_territory_troops:
-            print(f"Error: Not enough troops to Attack. {player.name} has " +
-            f"only {from_territory_troops} troop(s) in {from_territory} but " +
-            f"trying to attack with {num_troops}.")
-            return False
+            error_msg = (f"Error: Not enough troops to Attack. {player.name} " +
+            f"has only {from_territory_troops} troop(s) in {from_territory} " +
+            f"but trying to attack with {num_troops}.")
+            print(error_msg)
+            return False, error_msg
         
         # Check if the territories are adjacent
         if not self.game_state.check_if_adjacent(from_territory, territory):
-            print(f"Error: Territories are not connected")
-            return False
+            error_msg = f"Error: Territories are not connected"
+            print(error_msg)
+            return False, error_msg
 
         # Optionally handle reasoning here
         if reasoning:
             print(f"Reasoning: {reasoning}")
 
-        return True  # All moves are valid
+        return True, None  # All moves are valid
 
-    # def print_agent_cards(self, agent_name: str) -> None:
-    #     """
-    #     Prints the cards that an agent has in a structured format.
+    def generate_random_troop_placement(self, player: 'PlayerAgent', 
+        game_state: 'GameState'
+    ) -> List[Dict[str, int]]:
+        """
+        Generates a random troop placement for a player. The function will randomly
+        distribute the player's available troops across the territories they control.
 
-    #     Parameters:
-    #     - agent_name: The name of the agent.
+        Parameters:
+        - player: The player for whom to generate the move.
+        - game_state: The current state of the game.
 
-    #     Example:
-    #     - Player's cards are stored in self.player_cards as a list of Card objects.
-    #     """
-    #     if agent_name not in self.player_cards:
-    #         print(f"No cards found for {agent_name}.")
-    #         return
+        Returns:
+        - A list of dictionaries representing the troop placement move. 
+        Each dictionary contains a territory name and the number of troops placed there.
+        """
 
-    #     print(f"{agent_name}'s Cards:")
-    #     for index, card in enumerate(self.player_cards[agent_name], start=1):
-    #         print(f"{index}. {card.territory} {card.troop_type}")
+        # Get the list of territories the player controls
+        controlled_territories = game_state.get_player_controlled_territories(player.name)
 
+        # Total troops to allocate
+        troops_to_allocate = player.troops
 
-    # def get_player_cards(self, player: 'PlayerAgent'
-    #     ) -> Optional[List[Card]]:
-    #     """
-    #     Pass the player's cards to their evaluate_cards method.
-    #     """
-    #     cards = self.player_cards.get(player.name, [])
-    #     if cards:
-    #         return cards
-    #     else:
-    #         return None
+        # Initialize an empty list to store the troop placement moves
+        troop_placement = []
+
+        # Randomly distribute troops among controlled territories
+        for territory in controlled_territories:
+            if troops_to_allocate <= 0:
+                break
+
+            # Randomly decide the number of troops to place in the current territory
+            troops_for_this_territory = random.randint(1, troops_to_allocate)
+            troop_placement.append({'territory_name': territory, 'num_troops': troops_for_this_territory})
+
+            # Subtract the allocated troops from the total remaining troops
+            troops_to_allocate -= troops_for_this_territory
+
+        # If there are still troops remaining, distribute them across the territories randomly
+        while troops_to_allocate > 0:
+            for move in troop_placement:
+                if troops_to_allocate <= 0:
+                    break
+                move['num_troops'] += 1
+                troops_to_allocate -= 1
+
+        return troop_placement
         

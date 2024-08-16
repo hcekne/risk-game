@@ -9,7 +9,7 @@ import pandas as pd
 
 # Initialize the rules
 rules = Rules(progressive=False, capitals=False, mode="world_domination",
-                max_rounds=10)
+                max_rounds=2)
 
 # Initialize the GameMaster with the rules
 game = gm.GameMaster(rules)
