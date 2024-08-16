@@ -37,7 +37,6 @@ class GameState:
             continent_arrays[continent] = np.zeros(
                 (len(territories), self.num_players), dtype=int)
         return continent_arrays
-    
 
     def assign_territories_to_players_random(
             self, players: List['PlayerAgent']
@@ -59,7 +58,6 @@ class GameState:
         
         return self.last_player_index
 
-    
     def get_next_player(self, players: List['PlayerAgent']) -> Tuple[int, str]:
         self.last_player_index = (self.last_player_index + 1) % self.num_players
         next_player = players[self.last_player_index]
@@ -166,8 +164,7 @@ class GameState:
 
     def get_player_territories(self, player_name: str) -> List[str]:
         return list(self.territories_df[
-            self.territories_df[f'{player_name}'] > 0]['Territory'])
-        
+            self.territories_df[f'{player_name}'] > 0]['Territory'])      
 
     def get_adjacent_enemy_territories(
         self, player_name: str, territories_with_troops: List[Tuple[str, int]]
@@ -206,7 +203,6 @@ class GameState:
             adjacent_enemy_territories[territory] = [attacking_troops, enemy_territories]
         
         return adjacent_enemy_territories
-    
     
     def is_capital(self, territory: str) -> bool:
         # Check if the territory is a capital
