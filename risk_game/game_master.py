@@ -7,6 +7,8 @@ from risk_game.game_state import GameState
 from risk_game.rules import Rules
 from risk_game.card_deck import Deck, Card
 from risk_game.utils.decorators import track_turn_time
+from risk_game.utils.game_admin import create_game_folder, save_game_state, \
+save_player_data
 
 
 class GameMaster:
@@ -155,6 +157,7 @@ class GameMaster:
         
         if cards_to_trade is None:
             print(f"{player.name} failed to provide valid response to cards.")
+            player.return_formatting_errors += 1
             return
         else:
             print(cards_to_trade)
@@ -176,6 +179,7 @@ class GameMaster:
                 player.troops += troops
                 print(f"{player.name} traded in cards for {troops} extra troops.")
             else:
+                player.card_trade_errors += 1
                 print(f"Invalid trade attempt by {player.name}.")
 
     def ask_to_trade_in_cards(self, player: 'PlayerAgent') -> None:
@@ -188,6 +192,7 @@ class GameMaster:
         
         if cards_to_trade is None:
             print(f"{player.name} failed to provide valid response to cards.")
+            player.return_formatting_errors += 1
             return
 
         if cards_to_trade.pop() == 0:
@@ -210,6 +215,7 @@ class GameMaster:
                 player.troops += troops
                 print(f"{player.name} traded in cards for {troops} extra troops.")
             else:
+                player.card_trade_errors += 1
                 print(f"Invalid trade attempt by {player.name}.")
 
   
@@ -275,61 +281,6 @@ class GameMaster:
 
         return False  # No victory condition met, game continues
 
-    @track_turn_time
-    def play_a_turn(self, player: 'PlayerAgent')-> None:
-        print(f"---------Player {player.name} is starting their turn.----------")
-        # Phase 1: Troop Placement
-        self.phase_1_troop_placement(player)
-        self.phase_2_attack(player)
-        self.phase_3_fortify(player)
-        print(f"{player.name} has completed their turn.")
-    
-    def play_game(self, include_initial_troop_placement:bool = True
-    ) -> None:
-        
-        self.init_game_state()
-
-        if include_initial_troop_placement:
-            self.distribute_territories_random()
-            self.choose_capitals()
-            self.complete_initial_troop_placement()
-        else:
-            self.game_state.territories_df = pd.read_csv('territories.csv')
-
-        while not self.is_game_over():
-            print(f"this is the game_round var: {self.game_round}" )
-            print(f"this is the self.rules.max_rounds var: " +
-                  f"{self.rules.max_rounds}")
-            if self.game_round > self.rules.max_rounds:
-                print("Game over: Maximum rounds reached")
-                break
-            self.game_round += 1
-           
-          
-            print(f'Starting round: {self.game_round}')
-            print(f'This is the current game state:----------')
-            print(self.game_state.territories_df)
-            for player in self.active_players:
-                # distribute some cards to test logic needs to be taken out
-                if self.game_round == 1:
-                    for _ in range(5):
-                        card = self.deck.draw_card(self.discarded_cards)
-                        self.player_cards[player.name].append(card)
-                self.play_a_turn(player)
-                # check if the game is over
-                if self.is_game_over():
-                    self.winner = player
-                    break
-
-
-        print("Game over")
-        if self.game_round > self.rules.max_rounds:
-            print(f"No winner after {self.rules.max_rounds} rounds")
-        else:
-            print(f"{self.winner.name} wins")
-        print(f"Game lasted {self.game_round} rounds")
-
-
     def validate_move(
         self, player: 'PlayerAgent', 
         moves: List[Dict[str, int]], 
@@ -346,12 +297,14 @@ class GameMaster:
 
             if territory is None or num_troops is None:
                 error_msg = f"Error: Territory or num_troops is None"
+                player.return_formatting_errors += 1
                 print(error_msg)
                 return False, error_msg
 
             if not self.game_state.check_terr_control(player.name, territory):
                 error_msg = (f"Error: {player.name} does not control territory " +
                             f"{territory}")
+                player.troop_placement_errors += 1
                 print(error_msg)
                 return False, error_msg
 
@@ -362,6 +315,7 @@ class GameMaster:
             f"Error: Not enough troops to place. {player.name} has only " + 
             f"{player.troops} troop(s) left but trying to place {total_troops}.")
             print(error_msg)
+            player.troop_placement_errors += 1
             return False, error_msg
 
         if total_troops < player.troops:
@@ -369,6 +323,7 @@ class GameMaster:
             f"Error: Not placing all troops. {player.name} is trying to place " +
             f"{total_troops} troop(s) but has {player.troops}.")
             print(error_msg)
+            player.troop_placement_errors += 1
             return False, error_msg
 
         # Optionally handle reasoning here
@@ -382,18 +337,20 @@ class GameMaster:
         self, player: 'PlayerAgent')-> None:
         valid_move = False
         invalid_moves = 0
-        erro_msg = None
+        error_msg = None
 
         while not valid_move:
             if self.phase == 0:
                 # Phase 0: Initial troop placement 
                 # (single move treated as a list with one move)
                 moves, reasoning, _  = (
-                    player.make_initial_troop_placement(self.game_state, erro_msg))
+                    player.make_initial_troop_placement(
+                        self.game_state, error_msg))
             elif self.phase == 1:
                 # Phase 1: Troop placement (multiple moves)
                 moves, reasoning, _ = (
-                    player.make_troop_placement(self.game_state, erro_msg))
+                    player.make_troop_placement(
+                        self.game_state, error_msg))
             else:
                 raise ValueError(f"Unknown phase: {self.phase}")
             
@@ -460,6 +417,7 @@ class GameMaster:
         if territory is None or num_troops is None:
             error_msg = f"Error: Territory or num_troops is None"
             print(error_msg)
+            player.return_formatting_errors += 1
             return False, error_msg
         
         if territory == 'Blank' or num_troops == 0:
@@ -471,6 +429,7 @@ class GameMaster:
             error_msg = (f"Error: {player.name} does not control to " +
                     f"territory {territory}")
             print(error_msg)
+            player.fortify_errors += 1
             return False ,error_msg
             
         if not self.game_state.check_terr_control(
@@ -478,6 +437,7 @@ class GameMaster:
             error_msg = (f"Error: {player.name} does not control from " +
                     f"territory {territory}")
             print(error_msg)
+            player.fortify_errors += 1
             return False ,error_msg
         
         from_territory_troops = self.game_state.check_number_of_troops(
@@ -488,6 +448,7 @@ class GameMaster:
             f"has only {from_territory_troops} troop(s) in {from_territory} " +
             f"but trying to move {num_troops}.")
             print(error_msg)
+            player.fortify_errors += 1
             return False ,error_msg
         
         # Check if the territories are connected
@@ -495,6 +456,7 @@ class GameMaster:
             player.name, from_territory, territory):
             error_msg = f"Error: Territories are not connected"
             print(error_msg)
+            player.fortify_errors += 1
             return False ,error_msg
 
         # Optionally handle reasoning here
@@ -553,14 +515,33 @@ class GameMaster:
             if is_valid:
                 print("Moves are valid")
                 # calculate the outcome of the attack
-                outcome = self.game_state.update_game_state_for_attack_move(
-                    player, move, from_territory)
+                outcome, defender = (
+                    self.game_state.update_game_state_for_attack_move(
+                    player, move, from_territory))
                 if outcome == 'no_attack':
                     print("No attack was made")
                     invalid_attacks = 4  # Exit the loop
                 elif outcome == 'win':
                     successful_attacks += 1
                     print("Player won the attack")
+                    if not self.game_state.has_remaining_territories(defender):
+                        print(f"{defender} has been eliminated!")
+                        # Transfer cards from the eliminated player to the attacker
+                        if defender in self.player_cards:
+                            (self.player_cards[player.name].extend(
+                                self.player_cards[defender]))
+                            del self.player_cards[defender]
+
+                            # remove the eliminated player from the active players list
+                            self.remove_player(defender)
+                    
+                    # Check if the attacker needs to trade cards
+                    if len(self.player_cards[player.name]) > 5:
+                        print(f"{player.name} has more than 5 cards. " +
+                              f"Forcing card trade...")
+                        self.force_trade_in_cards(player)
+
+
                 else:
                     print("Player lost the attack")
                     lost_attacks += 1
@@ -587,6 +568,7 @@ class GameMaster:
         if territory is None or num_troops is None:
             error_msg = f"Error: Territory or num_troops is None"
             print(error_msg)
+            player.return_formatting_errors
             return False, error_msg
         
         if territory == 'Blank' or num_troops == 0:
@@ -598,6 +580,7 @@ class GameMaster:
             error_msg = (f"Error: {player.name} already controls " +
                   f"territory {territory}")
             print(error_msg)
+            player.attack_errors += 1
             return False, error_msg
             
         if not self.game_state.check_terr_control(
@@ -605,6 +588,7 @@ class GameMaster:
             error_msg = (f"Error: {player.name} does not control from " +
                 f"territory {territory}")
             print(error_msg)
+            player.attack_errors += 1
             return False, error_msg
         
         from_territory_troops = self.game_state.check_number_of_troops(
@@ -615,12 +599,14 @@ class GameMaster:
             f"has only {from_territory_troops} troop(s) in {from_territory} " +
             f"but trying to attack with {num_troops}.")
             print(error_msg)
+            player.attack_errors += 1
             return False, error_msg
         
         # Check if the territories are adjacent
         if not self.game_state.check_if_adjacent(from_territory, territory):
             error_msg = f"Error: Territories are not connected"
             print(error_msg)
+            player.attack_errors += 1
             return False, error_msg
 
         # Optionally handle reasoning here
@@ -677,3 +663,67 @@ class GameMaster:
 
         return troop_placement
         
+    @track_turn_time
+    def play_a_turn(self, player: 'PlayerAgent')-> None:
+        print(f"---------Player {player.name} is starting their turn.----------")
+        # Phase 1: Troop Placement
+        self.phase_1_troop_placement(player)
+        self.phase_2_attack(player)
+        self.phase_3_fortify(player)
+        print(f"{player.name} has completed their turn.")
+    
+    def play_game(self, include_initial_troop_placement:bool = True
+    ) -> None:
+        
+        turn_number = 0
+        games_folder = create_game_folder(base_folder="game_results")
+
+        self.init_game_state()
+
+        if include_initial_troop_placement:
+            self.distribute_territories_random()
+            self.choose_capitals()
+            self.complete_initial_troop_placement()
+        else:
+            self.game_state.territories_df = pd.read_csv('territories.csv')
+
+        while not self.is_game_over():
+            print(f"this is the game_round var: {self.game_round}" )
+            print(f"this is the self.rules.max_rounds var: " +
+                  f"{self.rules.max_rounds}")
+            if self.game_round > self.rules.max_rounds:
+                print("Game over: Maximum rounds reached")
+                break
+            self.game_round += 1
+           
+          
+            print(f'Starting round: {self.game_round}')
+            print(f'This is the current game state:----------')
+            print(self.game_state.territories_df)
+            for player in self.active_players:
+                print(f"these are the active players_:{self.active_players}")
+                # distribute some cards to test logic needs to be taken out
+                if self.game_round == 1:
+                    for _ in range(5):
+                        card = self.deck.draw_card(self.discarded_cards)
+                        self.player_cards[player.name].append(card)
+                self.play_a_turn(player)
+
+                turn_number += 1
+                save_game_state(self.game_state, games_folder, turn_number, 
+                               self.game_round)
+                save_player_data(self.players, games_folder, turn_number, 
+                                self.game_round)
+
+                # check if the game is over
+                if self.is_game_over():
+                    self.winner = player
+                    break
+
+
+        print("Game over")
+        if self.game_round > self.rules.max_rounds:
+            print(f"No winner after {self.rules.max_rounds} rounds")
+        else:
+            print(f"{self.winner.name} wins")
+        print(f"Game lasted {self.game_round} rounds")

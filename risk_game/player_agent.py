@@ -13,6 +13,7 @@ class PlayerAgent:
         self.return_formatting_errors: int = 0
         self.attack_errors: int = 0
         self.fortify_errors: int = 0
+        self.card_trade_errors: int = 0
         self.accumulated_turn_time : float = 0.0
     
     def send_message(self, message_content: str) -> str:
