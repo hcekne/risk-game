@@ -19,11 +19,11 @@ rules = Rules(progressive=False, capitals=False, mode="world_domination",
 # Initialize the GameMaster with the rules
 game = gm.GameMaster(rules)
 
-# game.add_player(name="Player_Player 1", 
-#                 llm_client=llm_client.create_llm_client("Groq",1 ))
-
 game.add_player(name="Player_Player 1", 
-                llm_client=llm_client.create_llm_client("Bedrock",1 ))
+                llm_client=llm_client.create_llm_client("Groq",1 ))
+
+# game.add_player(name="Player_Player 1", 
+#                 llm_client=llm_client.create_llm_client("Bedrock",1 ))
 
 # who_are_you_prompt = game.players[0].send_message("Hello, who are you?")
 # print(who_are_you_prompt)

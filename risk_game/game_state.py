@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import random
 from typing import Dict, List, Optional, Tuple
-from risk_game.game_utils import TERRITORIES, CONTINENT_BONUSES, \
+from risk_game.game_constants import TERRITORIES, CONTINENT_BONUSES, \
 TERRITORY_CONNECTIONS
 
 class GameState:
@@ -16,7 +16,6 @@ class GameState:
         self.territories_df: pd.DataFrame = self._init_territories_df(players)
         # Graph of territory connections
         self.territories_graph: Dict[str, List[str]] = TERRITORY_CONNECTIONS  
-        self.continent_arrays: Dict[str, np.ndarray] = self._init_continent_arrays()
     
     def _init_territories_df(self, players: List['PlayerAgent']) -> pd.DataFrame:
         # Use player names for columns
@@ -26,16 +25,6 @@ class GameState:
         for player in players:
             territories_df[f'{player.name}'] = 0
         return territories_df
-    
-    def _init_continent_arrays(self) -> Dict[str, np.ndarray]:
-        # Create a dictionary to hold the arrays for each continent
-        continent_arrays = {}
-        for continent, (territories, bonus) in CONTINENT_BONUSES.items():
-            # Initialize an array with rows equal to the number of territories 
-            # and columns equal to the number of players
-            continent_arrays[continent] = np.zeros(
-                (len(territories), self.num_players), dtype=int)
-        return continent_arrays
 
     def assign_territories_to_players_random(
             self, players: List['PlayerAgent']

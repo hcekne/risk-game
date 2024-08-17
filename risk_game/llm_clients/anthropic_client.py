@@ -9,9 +9,13 @@ class AnthropicClient(LLMClient):
         self.client = Client(api_key=os.environ.get("ANTHROPIC_API_KEY"))
         if model_number == 1:
             self.model_type = "claude-3-5-sonnet-20240620"
+        elif model_number == 2:
+            self.model_type = "claude-3-sonnet-20240229"
+        elif model_number == 3:
+            self.model_type = "claude-3-haiku-20240307"
         else:
             raise ValueError("Invalid model number. Please choose a number " +
-                             "between 1 and 1.")
+                             "between 1 and 3.")
     
 
     def get_chat_completion(self, message_content) -> str:

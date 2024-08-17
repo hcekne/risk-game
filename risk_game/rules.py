@@ -2,7 +2,7 @@
 from itertools import combinations
 from typing import List, Tuple, Dict
 from risk_game.card_deck import Card
-from risk_game.game_utils import CONTINENT_BONUSES
+from risk_game.game_constants import CONTINENT_BONUSES
 
 
 class Rules:
