@@ -1,9 +1,13 @@
 from typing import Dict, List, Optional, Tuple
 import random
+import pandas as pd
+import time
 from risk_game.player_agent import PlayerAgent
 from risk_game.game_state import GameState
 from risk_game.rules import Rules
 from risk_game.card_deck import Deck, Card
+from risk_game.utils.decorators import track_turn_time
+
 
 class GameMaster:
     def __init__(self, rules: Rules)-> None:
@@ -117,31 +121,29 @@ class GameMaster:
             for player in self.active_players:
                 while player.capital is None:
                     capital = player.choose_capital(self.game_state)
-                    player.capital = capital
-                
-    def initial_troop_placement(self):
+                    # set it for the game state
+                    self.game_state.capitals[player.name] = capital
+
+    @track_turn_time
+    def intial_troop_placement_player(self, player: 'PlayerAgent') -> None:
+        print(f"*****-------------NOW PLACING TROOPS FOR: -------------*****")
+        print(f"Current player name: {player.name}")
+        if player.troops > 0:
+            self.ensure_valid_move(player)
+
+    def move_to_next_player(self):
+        self.current_player_index = (
+            (self.current_player_index + 1) % len(self.active_players)
+        )
+  
+    def complete_initial_troop_placement(self):
         #self.current_player_index = 0
         while any(player.troops > 0 for player in self.active_players):
             current_player = self.active_players[self.current_player_index]
-            print(f"*****-------------NOW PLACING TROOPS FOR: -------------*****")
-            print(f"Current player name: {current_player.name}")
-            if current_player.troops > 0:
-                self.ensure_valid_move(current_player)
-            # Move to the next player
-            self.current_player_index = (
-                (self.current_player_index + 1) % len(self.active_players)
-            )
+            self.intial_troop_placement_player(current_player)
+            self.move_to_next_player()
+            
         print("Initial troop placement complete")
-
-    def play_a_turn(self, player: 'PlayerAgent')-> None:
-        print(f"---------Player {player.name} is starting their turn.----------")
-        # Phase 1: Troop Placement
-        self.phase_1_troop_placement(player)
-        self.phase_2_attack(player)
-        self.phase_3_fortify(player)
-        print(f"{player.name} has completed their turn.")
-        # Phase 2: Attack
-        # Phase 3: Fortify
 
     def force_trade_in_cards(self, player: 'PlayerAgent') -> None:
         player_cards = self.player_cards.get(player.name)
@@ -176,7 +178,6 @@ class GameMaster:
             else:
                 print(f"Invalid trade attempt by {player.name}.")
 
-
     def ask_to_trade_in_cards(self, player: 'PlayerAgent') -> None:
         player_cards = self.player_cards.get(player.name)
         # Ask the player if they want to trade in cards
@@ -210,6 +211,9 @@ class GameMaster:
                 print(f"{player.name} traded in cards for {troops} extra troops.")
             else:
                 print(f"Invalid trade attempt by {player.name}.")
+
+  
+        # end phase 0
 
     def phase_1_troop_placement(self, player: 'PlayerAgent')-> None:
         self.phase = 1
@@ -271,16 +275,37 @@ class GameMaster:
 
         return False  # No victory condition met, game continues
 
-    def play_game(self) -> None:
+    @track_turn_time
+    def play_a_turn(self, player: 'PlayerAgent')-> None:
+        print(f"---------Player {player.name} is starting their turn.----------")
+        # Phase 1: Troop Placement
+        self.phase_1_troop_placement(player)
+        self.phase_2_attack(player)
+        self.phase_3_fortify(player)
+        print(f"{player.name} has completed their turn.")
+    
+    def play_game(self, include_initial_troop_placement:bool = True
+    ) -> None:
+        
+        self.init_game_state()
+
+        if include_initial_troop_placement:
+            self.distribute_territories_random()
+            self.choose_capitals()
+            self.complete_initial_troop_placement()
+        else:
+            self.game_state.territories_df = pd.read_csv('territories.csv')
+
         while not self.is_game_over():
+            print(f"this is the game_round var: {self.game_round}" )
+            print(f"this is the self.rules.max_rounds var: " +
+                  f"{self.rules.max_rounds}")
             if self.game_round > self.rules.max_rounds:
                 print("Game over: Maximum rounds reached")
                 break
             self.game_round += 1
-            # remove any players with no territories
-            # first create a list of players to remove
-            # iteratate through list and remove players
-            
+           
+          
             print(f'Starting round: {self.game_round}')
             print(f'This is the current game state:----------')
             print(self.game_state.territories_df)

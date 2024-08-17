@@ -1,6 +1,6 @@
 import random
 from typing import List, Dict
-from risk_game.game_utils import STANDARD_CARD_DECK, TERRITORIES
+from risk_game.game_constants import STANDARD_CARD_DECK, TERRITORIES
 
 class Card:
     def __init__(self, territory: str, troop_type: str) -> None:

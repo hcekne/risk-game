@@ -13,6 +13,7 @@ class PlayerAgent:
         self.return_formatting_errors: int = 0
         self.attack_errors: int = 0
         self.fortify_errors: int = 0
+        self.accumulated_turn_time : float = 0.0
     
     def send_message(self, message_content: str) -> str:
         return self.llm_client.get_chat_completion(message_content)
@@ -614,3 +615,7 @@ class PlayerAgent:
 
         self.turn_strategy = parsed_response
 
+def choose_capital(self, game_state: 'GameState') -> str:
+    # Implement strategy to choose a capital
+    # return the name of the capital
+    pass
