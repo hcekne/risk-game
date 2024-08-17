@@ -1,4 +1,6 @@
 # Add your project dependencies here
+boto3
+anthropic
 groq
 ipython
 matplotlib
