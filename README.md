@@ -3,6 +3,10 @@
 ## Overview
 This project implements a simplified version of the Risk board game with AI players.
 
+The AI players play against each other using the API of the respective LLMs.
+
+
+
 ## Setup
 1. **Clone the repository:**
    ```bash
@@ -35,7 +39,7 @@ This project implements a simplified version of the Risk board game with AI play
 ## Running the Game
 To run the game, execute the following command:
 ```bash
-python scripts/run_game.py
+python scripts/example_run.py
 ```
 
 ## Running Tests
@@ -49,10 +53,10 @@ Feel free to submit issues or pull requests.
 
 
 ## TODO
-- [ ] Task 0: Write game logic outline
-- [ ] Task 1: Progam Game master and game logic
-- [ ] Task 2: Progam rules
-- [ ] Task 3: Add in API keys
+- [ ] Task 0: Implement Game history
+- [ ] Task 1: add open AI gpt 4-0 player
+- [ ] Task 2: add llama3.1 405 b player
+- [ ] Task 3: consider another top model anthropic????
 - [ ] Task 4: Create pixelated map of the risk world
 - [ ] Task 5: Create some dashboard where you can look through game states
 

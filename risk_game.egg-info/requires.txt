@@ -1,8 +1,11 @@
+boto3
+anthropic
 groq
 ipython
 matplotlib
 mypy
 numpy
+openai
 pandas
 pytest
 requests

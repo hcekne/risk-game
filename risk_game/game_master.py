@@ -22,10 +22,10 @@ class GameMaster:
         self.trade_count = 0  # Track the number of trades for progressive mode
         self.player_cards: Dict[str, List[Card]] = {}
 
-    def add_player(self, name:str, model_number:int) -> None:
+    def add_player(self, name:str, llm_client: 'LLMClient') -> None:
         if len(self.players) >= 6:
             raise ValueError("Cannot add more than 6 players")
-        player = PlayerAgent(name, model_number)
+        player = PlayerAgent(name, llm_client)
         self.players.append(player)
         self.player_cards[name] = []  # Initialize an empty list of cards 
 

@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import random
 from typing import Dict, List, Optional, Tuple
-# from risk_game.player_agent import PlayerAgent
 from risk_game.game_utils import TERRITORIES, CONTINENT_BONUSES, \
 TERRITORY_CONNECTIONS
 

@@ -2,6 +2,8 @@ import risk_game.game_master as gm
 import risk_game.card_deck as cd
 from risk_game.rules import Rules
 import pandas as pd
+from risk_game.llm_clients import llm_client
+import importlib
 
 
 
@@ -11,16 +13,61 @@ import pandas as pd
 rules = Rules(progressive=False, capitals=False, mode="world_domination",
                 max_rounds=2)
 
+
+# importlib.reload(gm)
+
 # Initialize the GameMaster with the rules
 game = gm.GameMaster(rules)
 
-game.add_player(name="Player_Player 1", model_number=1)
-game.add_player(name="Player_Player 2", model_number=2)
-game.add_player(name="Player_Player 4", model_number=4)
+# game.add_player(name="Player_Player 1", 
+#                 llm_client=llm_client.create_llm_client("Groq",1 ))
+
+game.add_player(name="Player_Player 1", 
+                llm_client=llm_client.create_llm_client("Bedrock",1 ))
+
+# who_are_you_prompt = game.players[0].send_message("Hello, who are you?")
+# print(who_are_you_prompt)
+
+game.add_player(name="Player_Player 2",
+                llm_client=llm_client.create_llm_client("Anthropic",1 ))
+# who_are_you_prompt = game.players[1].send_message("Hello, who are you?")
+
+#who_are_you_prompt[0].text
+
+#  print(who_are_you_prompt)
+# risk_follow_up_quesion = game.players[1].send_message("Are you a specialist in Risk?")
+# print(risk_follow_up_quesion)
+
+
+game.add_player(name="Player_Player 4", 
+                llm_client=llm_client.create_llm_client("OpenAI",1 ))
+
+# who_are_you_prompt = game.players[2].send_message("Hello, who are you?")
+# print(who_are_you_prompt)
+
+
+
+# game.add_player(name="Player_Player 5", 
+#                 llm_client=llm_client.create_llm_client("Bedrock",1 ))
+
+# who_are_you_prompt = game.players[3].send_message("Hello, who are you?")
+# print(who_are_you_prompt)
+
+
+
+
 
 print(game.players)  # This should now show PlayerAgent objects
 # game.add_player("Player 4")
 game.init_game_state()
+
+
+# a. Log in to the AWS Management Console. 
+# b. Navigate to the IAM (Identity and Access Management) service. 
+# c. Select 'Users' from the left sidebar, then choose your user name. 
+# d. Go to the 'Security Credentials' tab. 
+# e. Under 'Access keys (access key ID and secret access key)', 
+# create a new access key if you don't have one already.
 
 # game.distribute_territories_random()
 

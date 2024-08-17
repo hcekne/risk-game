@@ -1,13 +1,11 @@
-import json
 import re
 from typing import Dict,Optional,List,Tuple
-from network_utils import GroqClient
+from risk_game.llm_clients.llm_base import LLMClient
 
 class PlayerAgent:
-    def __init__(self, name: str, model_number: int)-> None:
+    def __init__(self, name: str, llm_client: LLMClient)-> None:
         self.name: str = name
-        self.model_number: int = model_number
-        self.agent_model = GroqClient(model_number)
+        self.llm_client: LLMClient = llm_client
         self.include_reasoning: bool = True
         self.troops: int = 0
         self.turn_strategy: str = ""
@@ -16,24 +14,18 @@ class PlayerAgent:
         self.attack_errors: int = 0
         self.fortify_errors: int = 0
     
-    def _send_message(self, message_content: str) -> str:
-        messages = [
-            {
-                "role": "user",
-                "content": message_content
-            }
-        ]
-        return self.agent_model.get_chat_completion(messages)
+    def send_message(self, message_content: str) -> str:
+        return self.llm_client.get_chat_completion(message_content)
     
     def parse_response_strategy(self, move_response: object) -> str:
-        response = move_response.choices[0].message.content
+        response = move_response.strip()
         response = response[:1200]
         return response
 
     def parse_response_text(
         self, move_response: object
     ) -> Tuple[List[Dict[str, int]], Optional[str], Optional[str]]:
-        response = move_response.choices[0].message.content
+        response = move_response.strip()
         # print(f"Response content: {response}")
 
         # Regular expression to extract all moves (e.g., |||Territory, 3|||)
@@ -86,7 +78,7 @@ class PlayerAgent:
         - The first element is a list of card numbers to trade, or None if no trade is suggested.
         - The second element is an optional string containing reasoning, if provided.
         """
-        response = move_response.choices[0].message.content.strip()
+        response = move_response.strip()
 
         # Regular expression to extract card trade suggestions (e.g., ||| 1, 3, 4 |||)
         trade_match = re.search(r'\|\|\|\s*(0|(?:\d+(?:\s*,\s*\d+)*))\s*\|\|\|', response)
@@ -169,7 +161,7 @@ class PlayerAgent:
         """
         parsed_response = (
             self.parse_response_text(
-                self._send_message(
+                self.send_message(
                  prompt))
         )
         return parsed_response
@@ -228,7 +220,7 @@ class PlayerAgent:
         """
         parsed_response = (
             self.parse_response_text(
-                self._send_message(
+                self.send_message(
                  prompt))
         )
 
@@ -294,7 +286,7 @@ class PlayerAgent:
         """
         parsed_response = (
             self.parse_response_text(
-                self._send_message(
+                self.send_message(
                  prompt))
         )
 
@@ -377,7 +369,7 @@ class PlayerAgent:
         # print(prompt)
         parsed_response = (
             self.parse_response_text(
-                self._send_message(
+                self.send_message(
                  prompt))
         )
 
@@ -436,7 +428,7 @@ class PlayerAgent:
         # print(prompt)   
         parsed_response = (
             self.parse_card_trade_response(
-                self._send_message(
+                self.send_message(
                  prompt))
         )
 
@@ -518,7 +510,7 @@ class PlayerAgent:
 
         parsed_response = (
             self.parse_card_trade_response(
-                self._send_message(
+                self.send_message(
                  prompt))
         )
 
@@ -615,7 +607,7 @@ class PlayerAgent:
         """
         parsed_response = (
             self.parse_response_strategy(
-                self._send_message(
+                self.send_message(
                  prompt))
         )
         
