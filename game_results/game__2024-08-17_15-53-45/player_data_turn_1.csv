@@ -1,0 +1,4 @@
+Name,Troops,Troop Placement Errors,Return Formatting Errors,Attack Errors,Fortify Errors,Card Trade Errors,Accumulated Turn Time,Turn_Number,Game_Round
+Player_Player 1,0,0,0,2,3,0,37.33363342285156,1,1
+Player_Player 2,35,0,0,0,0,0,0.0,1,1
+Player_Player 4,35,0,0,0,0,0,0.0,1,1

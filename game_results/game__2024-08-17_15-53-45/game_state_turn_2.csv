@@ -1,0 +1,43 @@
+Territory,Player_Player 1,Player_Player 2,Player_Player 4,Turn_Number,Game_Round
+Alaska,1,0,0,2,1
+Northwest Territory,0,1,0,2,1
+Greenland,0,1,0,2,1
+Alberta,0,1,0,2,1
+Ontario,0,1,0,2,1
+Quebec,0,2,0,2,1
+Western United States,0,3,0,2,1
+Eastern United States,0,10,0,2,1
+Central America,0,1,0,2,1
+Venezuela,3,0,0,2,1
+Peru,3,0,0,2,1
+Brazil,2,0,0,2,1
+Argentina,1,0,0,2,1
+North Africa,11,0,0,2,1
+Egypt,1,0,0,2,1
+East Africa,1,0,0,2,1
+Congo,1,0,0,2,1
+South Africa,0,0,1,2,1
+Madagascar,0,1,0,2,1
+Western Europe,3,0,0,2,1
+Southern Europe,3,0,0,2,1
+Northern Europe,0,0,1,2,1
+Great Britain,0,1,0,2,1
+Iceland,0,1,0,2,1
+Scandinavia,1,0,0,2,1
+Ukraine,0,0,1,2,1
+Afghanistan,0,0,1,2,1
+Ural,3,0,0,2,1
+Siberia,2,0,0,2,1
+Yakutsk,0,0,1,2,1
+Kamchatka,0,0,1,2,1
+Irkutsk,0,0,1,2,1
+Mongolia,5,0,0,2,1
+Japan,0,1,0,2,1
+China,1,0,0,2,1
+India,0,1,0,2,1
+Siam,0,1,0,2,1
+Indonesia,0,1,0,2,1
+New Guinea,0,1,0,2,1
+Western Australia,0,1,0,2,1
+Eastern Australia,0,1,0,2,1
+Middle East,1,0,0,2,1

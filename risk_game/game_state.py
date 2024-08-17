@@ -152,7 +152,10 @@ class GameState:
 
     def get_player_territories(self, player_name: str) -> List[str]:
         return list(self.territories_df[
-            self.territories_df[f'{player_name}'] > 0]['Territory'])      
+            self.territories_df[f'{player_name}'] > 0]['Territory']) 
+    
+    def has_remaining_territories(self, player_name: str) -> bool:
+        return len(self.get_player_territories(player_name)) > 0     
 
     def get_adjacent_enemy_territories(
         self, player_name: str, territories_with_troops: List[Tuple[str, int]]
@@ -221,13 +224,13 @@ class GameState:
         self, player: 'PlayerAgent', 
         move: List[Dict[str, int]], 
         from_territory: [str]
-        )-> str:
+        )-> Tuple[str, str]:
 
         territory = move[0].get('territory_name')
         num_troops = move[0].get('num_troops')
 
         if territory == 'Blank' or num_troops == 0:
-            return 'no_attack'  # Blank move is valid
+            return ('no_attack', "_")  # Blank move is valid
         
         original_troops = self.check_number_of_troops(player.name, 
                                                           from_territory)
@@ -248,12 +251,12 @@ class GameState:
                                set_troops=True)
             self.update_troops(defender_name, territory, 0,
                                set_troops=True)
-            return 'win'
+            return ('win', defender_name)
         else:
             # update the troops for the defender
             self.update_troops(defender_name, territory, remaining_troops,
                                set_troops=True)
-            return 'lose'
+            return ('lose', defender_name)
 
     def simulate_attack(self, attacking_troops: int, defending_troops: int
         ) -> Tuple[str, int]:
