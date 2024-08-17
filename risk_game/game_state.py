@@ -361,7 +361,8 @@ class GameState:
         
         return formatted_output
 
-    
+    def get_sum_of_player_troops(self, player_name: str) -> int:
+        return self.territories_df[f'{player_name}'].sum()
 
     
      

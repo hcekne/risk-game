@@ -314,6 +314,10 @@ class PlayerAgent:
         We are playing Risk and we are in the attack phase.   
         You, are {self.name}, and it is your turn. 
 
+        We are playing global domination, and you are trying to take over the world.
+        You need to capture all the territories and elimnation all the other
+        players to win the game.
+
         """
 
         if error_msg:
