@@ -1,6 +1,6 @@
 import os
 import time
-from groq import Groq, InternalServerError
+from groq import Groq, InternalServerError, APIStatusError
 from risk_game.llm_clients.llm_base import LLMClient 
 
 
@@ -39,12 +39,22 @@ class GroqClient(LLMClient):
                     max_tokens=2000,
                     temperature=1.2)
                 return response.choices[0].message.content
-            except InternalServerError as e:
-                print(f"Attempt {attempt + 1} failed with error: {e}." +
-                f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
+            
+            except APIStatusError as e:
+                # Check if it's a rate limit error
+                if e.code == 'rate_limit_exceeded':
+                    retry_after = e.response.get('Retry-After', retry_delay)
+                    print(f"Rate limit reached, retrying in " +
+                          f"{retry_after} seconds...")
+                    time.sleep(float(retry_after))
+                else:
+                    print(f"Attempt {attempt + 1} failed with error: {e}. " +
+                          f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
             except Exception as e:
                 print(f"Unexpected error: {e}")
                 break
 
-        raise InternalServerError("Maximum retries reached. Service is still unavailable.")
+        raise InternalServerError(("Maximum retries reached. Service is "+
+                                "still unavailable."), response=None, body=None)
+    

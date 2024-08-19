@@ -254,10 +254,24 @@ class PlayerAgent:
 
         Your current strategy for this turn is: {self.turn_strategy}
 
+        **Objective:**
+        Your goal is to fortify your borders by moving large numbers of 
+        troops to the key border territories that you control. This will 
+        allow you to launch powerful attacks in the next round. Do not 
+        waste time with small, incremental fortifications. Focus on 
+        concentrating your forces in preparation for a decisive attack.
+
+         **Strategic Considerations:**
+        - Identify your key border territories, especially those that are 
+        adjacent to enemy territories.
+        - Move a significant number of troops to these key border 
+        territories to strengthen your defenses and prepare for a major offensive in the next round.
+        - Avoid spreading your troops too thin. Focus on fortifying with large numbers of troops, rather than just small reinforcements.
+
         To choose a territory to fortify from, you need to have more than one 
         troop in that territory. The territories you have more than 
         one troop in are: {strong_territories}.
-        Remember, to fortify is optional and you can choose not to fortify.
+        To fortify is optional and you can choose not to fortify.
 
         If you choose to fortify, choose a territory ONLY from the following
         list of tuples containing territories and troop numbers:
@@ -272,7 +286,7 @@ class PlayerAgent:
         Reasoning:+++Reasoning for move+++
 
         For example:
-        To Territory:|||Brazil, 1|||
+        To Territory:|||Brazil, 10|||
         From Territory:###Argentina###
 
         Reasoning:+++I need more troops in Brazil+++
@@ -542,8 +556,8 @@ class PlayerAgent:
 
 
         prompt = """
-        We are playing Risk and you are starting your turn. 
-        You, are {self.name}, and it is your turn. 
+        We are playing Risk, World Domination.
+        You, are {self.name}, and it is your turn.
 
         {current_game_state}
 
@@ -555,13 +569,12 @@ class PlayerAgent:
 
         **Objective:**
 
-        Your goal this turn is to maximize your position by:
-        - Securing continent bonuses by acquiring key territories.
-        - Weakening your strongest opponents to prevent them from gaining continent bonuses.
-        - **Eliminating opponents** when the opportunity arises, which will 
-        allow you to gain their cards. This can be especially advantageous 
-        when playing with progressive card bonuses, as you could potentially 
-        trade in cards for a significant troop boost.
+       Your goal is to win the game by eliminating all opponents and 
+       controlling the entire map. Focus on decisive attacks that reduce 
+       your opponents' ability to fight back. When possible, eliminate 
+       opponents to gain their cards, which will allow you to trade them 
+       in for more troops and accelerate your conquest.
+
 
         **Strategic Considerations:**
 
@@ -579,6 +592,11 @@ class PlayerAgent:
         - Identify your most vulnerable territories and consider fortifying them.
         - Consider the potential moves of your opponents and plan your defense 
         accordingly.
+
+        Multi-Turn Planning: Think about how you can win the game within 
+        the next 2-3 turns. What moves will set you up for a decisive victory?
+        Don't just focus on this turn; consider how your actions this turn 
+        will help you dominate in the next few turns.
 
 
         **Instructions:**

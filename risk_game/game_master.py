@@ -154,7 +154,8 @@ class GameMaster:
                     self.game_state.get_sum_of_player_troops(player.name))
             print(f"{player.name} has {placed_troops} troops")
 
-        if self.game_state.validate_territory_assignment():
+        if all(self.game_state.get_sum_of_player_troops(player.name) == 
+               corrrect_initial_troops for player in self.active_players):
             print("Initial troop placement complete")
         else:
             raise ValueError("Invalid territory assignment")
@@ -277,7 +278,7 @@ class GameMaster:
     def is_game_over(self) -> bool:
         if self.rules.capitals:
             # Check if any player controls all capitals
-            for player in self.players:
+            for player in self.active_players:
                 player_territories = (
                     self.game_state.get_player_territories(player.name))
                 if all(capital in player_territories for 
@@ -285,7 +286,7 @@ class GameMaster:
                     return True  # This player controls all capitals, game over
         else:
             # Check if any player controls all territories
-            for player in self.players:
+            for player in self.active_players:
                 player_territories = (
                     self.game_state.get_player_territories(player.name))
                 if len(player_territories) == len(self.game_state.territories_df):

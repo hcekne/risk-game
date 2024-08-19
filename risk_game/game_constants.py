@@ -69,6 +69,31 @@ CONTINENT_BONUSES = {
     "Australia": (["Indonesia", "New Guinea", "Western Australia", "Eastern Australia"], 2)
 }
 
+
+# Ordered territories by continents according to CONTINENT_BONUSES
+TERRITORIES_ORDERED_BY_CONTINENTS = [
+    # North America
+    "Alaska", "Northwest Territory", "Greenland", "Alberta", "Ontario", "Quebec",
+    "Western United States", "Eastern United States", "Central America",
+    
+    # South America
+    "Venezuela", "Peru", "Brazil", "Argentina",
+    
+    # Europe
+    "Iceland", "Great Britain", "Scandinavia", "Ukraine", "Northern Europe",
+    "Western Europe", "Southern Europe",
+    
+    # Africa
+    "North Africa", "Egypt", "East Africa", "Congo", "South Africa", "Madagascar",
+    
+    # Asia
+    "Ural", "Siberia", "Yakutsk", "Kamchatka", "Irkutsk", "Mongolia", "Japan",
+    "Afghanistan", "China", "Middle East", "India", "Siam",
+    
+    # Australia
+    "Indonesia", "New Guinea", "Western Australia", "Eastern Australia"
+]
+
 STANDARD_CARD_DECK = [
 {'territory': 'Siam', 'troop_type': 'canon'},
 {'territory': 'Central America', 'troop_type': 'infantry'},
