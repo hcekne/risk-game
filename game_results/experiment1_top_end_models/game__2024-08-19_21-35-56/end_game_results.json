@@ -1,0 +1,37 @@
+{
+    "winner": "gpt-4o",
+    "victory_condition": "Territory Control 65%",
+    "total_rounds": 15,
+    "players": [
+        {
+            "name": "llama3.1_70",
+            "total_troops": 0,
+            "territories_controlled": 4,
+            "troop_placement_errors": 0,
+            "return_formatting_errors": 6,
+            "attack_errors": 12,
+            "fortify_errors": 5,
+            "card_trade_errors": 6
+        },
+        {
+            "name": "gpt-4o",
+            "total_troops": 0,
+            "territories_controlled": 28,
+            "troop_placement_errors": 0,
+            "return_formatting_errors": 0,
+            "attack_errors": 13,
+            "fortify_errors": 0,
+            "card_trade_errors": 6
+        },
+        {
+            "name": "Claude_Sonnet_3_5",
+            "total_troops": 0,
+            "territories_controlled": 10,
+            "troop_placement_errors": 0,
+            "return_formatting_errors": 0,
+            "attack_errors": 7,
+            "fortify_errors": 0,
+            "card_trade_errors": 3
+        }
+    ]
+}

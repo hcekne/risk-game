@@ -1,0 +1,4 @@
+Name,Troops,Troop Placement Errors,Return Formatting Errors,Attack Errors,Fortify Errors,Card Trade Errors,Accumulated Turn Time,Turn_Number,Game_Round
+Weak(gpt-3.5-turbo),0,1,0,39,13,0,149.62528324127197,39,13
+Strong(gpt-4o),0,0,0,0,0,0,172.01361465454102,39,13
+Medium(gpt-4o-mini),0,0,0,18,10,2,163.94167804718018,39,13

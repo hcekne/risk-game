@@ -1,0 +1,37 @@
+{
+    "winner": "Medium(gpt-4o-mini)",
+    "victory_condition": "Max Rounds Reached - Territory Control",
+    "total_rounds": 17,
+    "players": [
+        {
+            "name": "Weak(gpt-3.5-turbo)",
+            "total_troops": 0,
+            "territories_controlled": 6,
+            "troop_placement_errors": 0,
+            "return_formatting_errors": 0,
+            "attack_errors": 48,
+            "fortify_errors": 28,
+            "card_trade_errors": 7
+        },
+        {
+            "name": "Medium(gpt-4o-mini)",
+            "total_troops": 0,
+            "territories_controlled": 21,
+            "troop_placement_errors": 3,
+            "return_formatting_errors": 0,
+            "attack_errors": 21,
+            "fortify_errors": 3,
+            "card_trade_errors": 4
+        },
+        {
+            "name": "Strong(gpt-4o)",
+            "total_troops": 0,
+            "territories_controlled": 15,
+            "troop_placement_errors": 2,
+            "return_formatting_errors": 0,
+            "attack_errors": 8,
+            "fortify_errors": 1,
+            "card_trade_errors": 4
+        }
+    ]
+}

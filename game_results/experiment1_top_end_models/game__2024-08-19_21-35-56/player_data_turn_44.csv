@@ -1,0 +1,4 @@
+Name,Troops,Troop Placement Errors,Return Formatting Errors,Attack Errors,Fortify Errors,Card Trade Errors,Accumulated Turn Time,Turn_Number,Game_Round
+llama3.1_70,0,0,6,12,5,6,297.5721654891968,44,15
+gpt-4o,0,0,0,13,0,6,384.74054503440857,44,15
+Claude_Sonnet_3_5,0,0,0,7,0,3,439.61936378479004,44,15
