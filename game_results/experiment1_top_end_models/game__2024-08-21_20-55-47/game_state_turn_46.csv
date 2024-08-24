@@ -1,0 +1,43 @@
+Territory,Claude_Sonnet_3_5,llama3.1_70,gpt-4o,Turn_Number,Game_Round
+Alaska,1,0,0,46,16
+Northwest Territory,1,0,0,46,16
+Greenland,1,0,0,46,16
+Alberta,3,0,0,46,16
+Ontario,2,0,0,46,16
+Quebec,1,0,0,46,16
+Western United States,20,0,0,46,16
+Eastern United States,1,0,0,46,16
+Central America,2,0,0,46,16
+Venezuela,2,0,0,46,16
+Peru,1,0,0,46,16
+Brazil,1,0,0,46,16
+Argentina,1,0,0,46,16
+North Africa,0,1,0,46,16
+Egypt,0,1,0,46,16
+East Africa,1,0,0,46,16
+Congo,1,0,0,46,16
+South Africa,0,1,0,46,16
+Madagascar,0,1,0,46,16
+Western Europe,0,18,0,46,16
+Southern Europe,0,0,1,46,16
+Northern Europe,0,34,0,46,16
+Great Britain,0,1,0,46,16
+Iceland,0,25,0,46,16
+Scandinavia,0,1,0,46,16
+Ukraine,0,0,1,46,16
+Afghanistan,0,0,1,46,16
+Ural,0,0,7,46,16
+Siberia,0,0,1,46,16
+Yakutsk,0,0,1,46,16
+Kamchatka,0,0,1,46,16
+Irkutsk,0,0,1,46,16
+Mongolia,0,0,1,46,16
+Japan,0,0,1,46,16
+China,0,0,1,46,16
+India,1,0,0,46,16
+Siam,1,0,0,46,16
+Indonesia,0,1,0,46,16
+New Guinea,0,1,0,46,16
+Western Australia,1,0,0,46,16
+Eastern Australia,0,1,0,46,16
+Middle East,0,1,0,46,16

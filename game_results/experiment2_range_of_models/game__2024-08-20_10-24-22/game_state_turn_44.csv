@@ -1,0 +1,43 @@
+Territory,Strong(gpt-4o),Medium(gpt-4o-mini),Weak(gpt-3.5-turbo),Turn_Number,Game_Round
+Alaska,0,0,1,44,15
+Northwest Territory,0,0,2,44,15
+Greenland,0,0,1,44,15
+Alberta,0,0,1,44,15
+Ontario,0,0,43,44,15
+Quebec,0,0,25,44,15
+Western United States,0,0,1,44,15
+Eastern United States,0,0,1,44,15
+Central America,0,1,0,44,15
+Venezuela,0,1,0,44,15
+Peru,0,16,0,44,15
+Brazil,0,1,0,44,15
+Argentina,0,1,0,44,15
+North Africa,0,1,0,44,15
+Egypt,13,0,0,44,15
+East Africa,1,0,0,44,15
+Congo,1,0,0,44,15
+South Africa,1,0,0,44,15
+Madagascar,1,0,0,44,15
+Western Europe,12,0,0,44,15
+Southern Europe,1,0,0,44,15
+Northern Europe,1,0,0,44,15
+Great Britain,2,0,0,44,15
+Iceland,1,0,0,44,15
+Scandinavia,1,0,0,44,15
+Ukraine,6,0,0,44,15
+Afghanistan,1,0,0,44,15
+Ural,1,0,0,44,15
+Siberia,0,0,1,44,15
+Yakutsk,1,0,0,44,15
+Kamchatka,0,0,1,44,15
+Irkutsk,1,0,0,44,15
+Mongolia,1,0,0,44,15
+Japan,1,0,0,44,15
+China,1,0,0,44,15
+India,1,0,0,44,15
+Siam,1,0,0,44,15
+Indonesia,0,1,0,44,15
+New Guinea,0,0,1,44,15
+Western Australia,1,0,0,44,15
+Eastern Australia,0,0,1,44,15
+Middle East,1,0,0,44,15

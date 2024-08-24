@@ -1,0 +1,43 @@
+Territory,gpt-4o,llama3.1_70,Claude_Sonnet_3_5,Turn_Number,Game_Round
+Alaska,3,0,0,18,6
+Northwest Territory,23,0,0,18,6
+Greenland,13,0,0,18,6
+Alberta,1,0,0,18,6
+Ontario,1,0,0,18,6
+Quebec,1,0,0,18,6
+Western United States,1,0,0,18,6
+Eastern United States,14,0,0,18,6
+Central America,1,0,0,18,6
+Venezuela,0,0,1,18,6
+Peru,0,1,0,18,6
+Brazil,0,0,1,18,6
+Argentina,1,0,0,18,6
+North Africa,0,1,0,18,6
+Egypt,0,1,0,18,6
+East Africa,0,0,1,18,6
+Congo,1,0,0,18,6
+South Africa,1,0,0,18,6
+Madagascar,0,0,1,18,6
+Western Europe,0,0,1,18,6
+Southern Europe,0,0,1,18,6
+Northern Europe,0,0,1,18,6
+Great Britain,0,0,11,18,6
+Iceland,1,0,0,18,6
+Scandinavia,0,0,1,18,6
+Ukraine,0,0,5,18,6
+Afghanistan,0,0,1,18,6
+Ural,0,0,1,18,6
+Siberia,0,0,1,18,6
+Yakutsk,1,0,0,18,6
+Kamchatka,1,0,0,18,6
+Irkutsk,1,0,0,18,6
+Mongolia,1,0,0,18,6
+Japan,1,0,0,18,6
+China,0,0,1,18,6
+India,0,1,0,18,6
+Siam,0,1,0,18,6
+Indonesia,1,0,0,18,6
+New Guinea,0,1,0,18,6
+Western Australia,1,0,0,18,6
+Eastern Australia,0,1,0,18,6
+Middle East,0,0,1,18,6

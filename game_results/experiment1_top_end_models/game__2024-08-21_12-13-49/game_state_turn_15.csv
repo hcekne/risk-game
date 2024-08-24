@@ -1,0 +1,43 @@
+Territory,gpt-4o,llama3.1_70,Claude_Sonnet_3_5,Turn_Number,Game_Round
+Alaska,0,0,1,15,5
+Northwest Territory,0,0,3,15,5
+Greenland,0,0,1,15,5
+Alberta,0,0,2,15,5
+Ontario,0,0,1,15,5
+Quebec,0,0,1,15,5
+Western United States,0,0,1,15,5
+Eastern United States,0,0,4,15,5
+Central America,15,0,0,15,5
+Venezuela,1,0,0,15,5
+Peru,1,0,0,15,5
+Brazil,1,0,0,15,5
+Argentina,25,0,0,15,5
+North Africa,1,0,0,15,5
+Egypt,1,0,0,15,5
+East Africa,1,0,0,15,5
+Congo,1,0,0,15,5
+South Africa,1,0,0,15,5
+Madagascar,1,0,0,15,5
+Western Europe,0,0,1,15,5
+Southern Europe,0,0,1,15,5
+Northern Europe,0,0,1,15,5
+Great Britain,0,0,1,15,5
+Iceland,0,1,0,15,5
+Scandinavia,0,1,0,15,5
+Ukraine,0,0,1,15,5
+Afghanistan,1,0,0,15,5
+Ural,1,0,0,15,5
+Siberia,0,0,1,15,5
+Yakutsk,1,0,0,15,5
+Kamchatka,0,1,0,15,5
+Irkutsk,0,0,1,15,5
+Mongolia,0,0,1,15,5
+Japan,1,0,0,15,5
+China,0,0,1,15,5
+India,1,0,0,15,5
+Siam,0,1,0,15,5
+Indonesia,0,0,1,15,5
+New Guinea,0,1,0,15,5
+Western Australia,0,1,0,15,5
+Eastern Australia,0,1,0,15,5
+Middle East,1,0,0,15,5
