@@ -7,3 +7,9 @@ __pycache__/
 
 # env files
 .env
+
+# game files
+
+game_results/game__*
+
+game_results/experiment0*
