@@ -1,7 +1,8 @@
 import pandas as pd
 import os
 from datetime import datetime
-from typing import List
+from typing import List, Optional
+import json
 
 
 
@@ -42,3 +43,46 @@ def save_player_data(players: List['PlayerAgent'], game_folder: str,
     df['Game_Round'] = game_round
     filename = os.path.join(game_folder, f"player_data_turn_{turn_number}.csv")
     df.to_csv(filename, index=False)
+
+def save_end_game_results(players: List["PlayerAgent"], winner: Optional[str], 
+                          victory_condition: Optional[str], game_round: int, 
+                          games_folder: str, game_state: 'GameState') -> None:
+    """
+    Save the end game results to a JSON file.
+
+    Parameters:
+    - players: List of PlayerAgent instances representing the players.
+    - winner: The name of the winning player (or None if no winner).
+    - victory_condition: The victory condition met (or None if no specific condition).
+    - game_round: The number of rounds the game lasted.
+    - games_folder: The folder where the results should be saved.
+    """
+
+    # Prepare the file path
+    end_game_file = os.path.join(games_folder, 'end_game_results.json')
+    
+    # Gather player data
+    player_data = []
+    for player in players:
+        player_data.append({
+            'name': player.name,
+            'total_troops': player.troops,
+            'territories_controlled': len(game_state.get_player_territories(player.name)),
+            'troop_placement_errors': player.troop_placement_errors,
+            'return_formatting_errors': player.return_formatting_errors,
+            'attack_errors': player.attack_errors,
+            'fortify_errors': player.fortify_errors,
+            'card_trade_errors': player.card_trade_errors
+        })
+    
+    # Prepare the end-game data
+    end_game_data = {
+        'winner': winner if winner else 'No Winner',
+        'victory_condition': victory_condition if victory_condition else 'None',
+        'total_rounds': game_round,
+        'players': player_data
+    }
+    
+    # Write the data to a JSON file
+    with open(end_game_file, 'w') as file:
+        json.dump(end_game_data, file, indent=4)

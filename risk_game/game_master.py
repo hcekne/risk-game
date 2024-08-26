@@ -8,7 +8,7 @@ from risk_game.rules import Rules
 from risk_game.card_deck import Deck, Card
 from risk_game.utils.decorators import track_turn_time
 from risk_game.utils.game_admin import create_game_folder, save_game_state, \
-save_player_data
+save_player_data, save_end_game_results
 
 
 class GameMaster:
@@ -17,16 +17,31 @@ class GameMaster:
         self.dead_players: List[PlayerAgent] = []
         self.active_players: List[PlayerAgent] = []
         self.game_state = None
+        self.game_over = False
         self.game_round = 0
         self.phase: int = 0
-        self.rules = Rules()
         self.current_player_index = -1
         self.deck = None
         self.winner: Optional[PlayerAgent] = None
         self.discarded_cards = []
         self.rules = rules  # Store the rules instance
-        self.trade_count = 0  # Track the number of trades for progressive mode
         self.player_cards: Dict[str, List[Card]] = {}
+        self.victory_condition: Optional[str] = None
+
+    def __repr__(self) -> str:
+        return (f"<GameMaster("
+                f"game_round={self.game_round}, "
+                f"phase={self.phase}, "
+                f"active_players={len(self.active_players)}, "
+                f"dead_players={len(self.dead_players)}, "
+                f"current_player={self.players[self.current_player_index].name if self.current_player_index != -1 else 'None'}, "
+                f"winner={self.winner.name if self.winner else 'None'}, "
+                f"game_over={self.game_over}, "
+                f"victory_condition={self.victory_condition or 'None'}, "
+                f"rules={self.rules})>"
+                )
+
+
 
     def add_player(self, name:str, llm_client: 'LLMClient') -> None:
         if len(self.players) >= 6:
@@ -49,7 +64,7 @@ class GameMaster:
         for player in self.players:
             player.troops = intial_troops
         self.active_players = self.players.copy()
-        self.game_state = GameState(self.active_players)
+        self.game_state = GameState(self.active_players, self.rules)
         self.deck = Deck()
 
     def remove_player(self, player_name: str) -> None:
@@ -88,7 +103,7 @@ class GameMaster:
         move: Tuple[Optional[str], Optional[int], Optional[str]]
         ) -> bool:
         territory, num_troops, _ = move  # Unpack the tuple, ignore reasoning
-        print(f"Territory: {territory}, Num troops: {num_troops}")
+        # print(f"Territory: {territory}, Num troops: {num_troops}")
         if territory is None or num_troops is None:
             print(f"Error: Territory or num_troops is None")
             player.return_formatting_errors += 1
@@ -190,6 +205,7 @@ class GameMaster:
 
                 # Grant the player the corresponding troops
                 player.troops += troops
+                self.rules.trade_count += 1
                 print(f"{player.name} traded in cards for {troops} extra troops.")
             else:
                 player.card_trade_errors += 1
@@ -226,6 +242,7 @@ class GameMaster:
 
                 # Grant the player the corresponding troops
                 player.troops += troops
+                self.rules.trade_count += 1
                 print(f"{player.name} traded in cards for {troops} extra troops.")
             else:
                 player.card_trade_errors += 1
@@ -238,7 +255,7 @@ class GameMaster:
         self.phase = 1
         player.troops = 0
         # Make the player define a strategy for the turn
-        player.define_strategy_for_move(self.game_state)
+        player.define_strategy_for_move(self.rules, self.game_state)
 
         # figure out if the player needs to trade in cards (i.e. has 5 or more cards)
         while len(self.player_cards[player.name]) >= 5:
@@ -261,9 +278,15 @@ class GameMaster:
 
     def phase_2_attack(self, player: 'PlayerAgent')-> None:
         self.phase = 2
-        print(f"{player.name} is attacking")
+        # print(f"{player.name} is attacking")
     
-        successful_attacks = self.ensure_valid_attack_move(player)
+        successful_attacks, game_over = self.ensure_valid_attack_move(player)
+
+        # if game is over, return to end the game
+        if self.game_over:
+            return
+       
+
         if successful_attacks > 0:  # Player gets a card if they won an attack
             card = self.deck.draw_card(self.discarded_cards)
             self.player_cards[player.name].append(card)
@@ -275,24 +298,39 @@ class GameMaster:
         print(f"{player.name} is fortifying")
         self.ensure_valid_fortify_move(player)
 
-    def is_game_over(self) -> bool:
-        if self.rules.capitals:
-            # Check if any player controls all capitals
-            for player in self.active_players:
-                player_territories = (
-                    self.game_state.get_player_territories(player.name))
-                if all(capital in player_territories for 
-                       capital in self.game_state.capitals.values()):
-                    return True  # This player controls all capitals, game over
-        else:
-            # Check if any player controls all territories
-            for player in self.active_players:
-                player_territories = (
-                    self.game_state.get_player_territories(player.name))
-                if len(player_territories) == len(self.game_state.territories_df):
-                    return True  # This player controls all territories, game over
+    # def is_game_over(self) -> bool:
+    #     if self.rules.capitals:
+    #         # Check if any player controls all capitals
+    #         for player in self.active_players:
+    #             player_territories = (
+    #                 self.game_state.get_player_territories(player.name))
+    #             if all(capital in player_territories for 
+    #                    capital in self.game_state.capitals.values()):
+    #                 return True  # This player controls all capitals, game over
+    #     else:
+    #         # Check if any player controls all territories
+    #         for player in self.active_players:
+    #             player_territories = (
+    #                 self.game_state.get_player_territories(player.name))
+    #             if len(player_territories) == len(self.game_state.territories_df):
+    #                 return True  # This player controls all territories, game over
 
-        return False  # No victory condition met, game continues
+    #     return False  # No victory condition met, game continues
+    
+
+    def is_game_over(self) -> bool:
+        print("Checking victory conditions")
+        for player in self.active_players:
+            game_over, winner_name, victory_condition = (
+                self.rules.check_victory_conditions(
+                    self.game_state, player, self.game_round, 
+                    self.active_players))
+            if game_over:
+                self.game_over = True
+                self.winner = next(p for p in self.players if p.name == winner_name) if winner_name else None
+                self.victory_condition = victory_condition
+                return True
+        return False
 
     def validate_move_phase_1(
         self, player: 'PlayerAgent', 
@@ -394,7 +432,7 @@ class GameMaster:
                 # (single move treated as a list with one move)
                 moves, reasoning, _  = (
                     player.make_initial_troop_placement(
-                        self.game_state, error_msg))
+                        self.rules, self.game_state, error_msg))
                 
                 is_valid, error_msg = self.validate_move_phase_0(
                     player, moves, reasoning)
@@ -403,7 +441,7 @@ class GameMaster:
                 # Phase 1: Troop placement (multiple moves)
                 moves, reasoning, _ = (
                     player.make_troop_placement(
-                        self.game_state, error_msg))
+                        self.rules, self.game_state, error_msg))
                 # Validate the moves
                 is_valid, error_msg = self.validate_move_phase_1(
                     player, moves, reasoning)
@@ -412,14 +450,18 @@ class GameMaster:
                 raise ValueError(f"Unknown phase: {self.phase}")
             
             if is_valid:
-                print("Moves are valid")
+                # print("Moves are valid")
                 self.update_game_state_for_multiple_moves(player, moves)
                 self.reduce_player_troops_for_multiple_moves(player, moves)
                 valid_move = True
             elif invalid_moves >= 3:
                 print("Too many invalid moves, random troop placement turn")
+                if self.phase == 0:
+                    intial_placement = True
+                else:
+                    intial_placement = False
                 moves = self.generate_random_troop_placement(
-                    player, self.game_state) 
+                    player, self.game_state, initial_placement=intial_placement) 
                 reasoning = "Random troop placement"
 
                 if self.phase == 0:
@@ -430,7 +472,7 @@ class GameMaster:
                         player, moves, reasoning)
 
                 if is_valid:
-                    print("Random moves are valid")
+                    # print("Random moves are valid")
                     self.update_game_state_for_multiple_moves(player, moves)
                     self.reduce_player_troops_for_multiple_moves(player, moves)
                     valid_move = True
@@ -448,14 +490,15 @@ class GameMaster:
 
         while fortify_tries < 3:
             moves, reasoning, from_territory = (
-                player.make_fortify_move(self.game_state, error_msg)
+                player.make_fortify_move(self.rules,
+                    self.game_state, error_msg)
             ) 
             # print(f"Proposed moves: {moves}, Reasoning: {reasoning}")
             is_valid, error_msg = self.validate_fortify_move(
                 player, moves, reasoning, from_territory)
 
             if is_valid:
-                print("Moves are valid")
+                # print("Moves are valid")
                 self.update_game_state_for_fortify_move(
                     player, moves, from_territory)
                 fortify_tries = 4  # Exit the loop
@@ -520,7 +563,8 @@ class GameMaster:
 
         # Optionally handle reasoning here
         if reasoning:
-            print(f"Reasoning: {reasoning}")
+            # print(f"Reasoning: {reasoning}")
+            pass
 
         return True, None  # All moves are valid
     
@@ -553,7 +597,7 @@ class GameMaster:
         player.troops -= total_troops
 
     def ensure_valid_attack_move(
-        self, player: 'PlayerAgent')-> int:
+        self, player: 'PlayerAgent')-> Tuple[int, Optional[bool]]:
         invalid_attacks = 0
         lost_attacks = 0
         successful_attacks = 0
@@ -561,7 +605,8 @@ class GameMaster:
 
         while invalid_attacks < 3:
             move, reasoning, from_territory = (
-                player.make_attack_move(self.game_state, successful_attacks, 
+                player.make_attack_move(self.rules,
+                    self.game_state, successful_attacks, 
                                         error_msg)
             ) 
             # print(f"Proposed attack: {move} from {from_territory}, " +
@@ -571,7 +616,7 @@ class GameMaster:
                 player, move, reasoning, from_territory)
 
             if is_valid:
-                print("Moves are valid")
+                # print("Moves are valid")
                 # calculate the outcome of the attack
                 outcome, defender = (
                     self.game_state.update_game_state_for_attack_move(
@@ -581,7 +626,7 @@ class GameMaster:
                     invalid_attacks = 4  # Exit the loop
                 elif outcome == 'win':
                     successful_attacks += 1
-                    print("Player won the attack")
+                    # print("Player won the attack")
                     if not self.game_state.has_remaining_territories(defender):
                         print(f"{defender} has been eliminated!")
                         # Transfer cards from the eliminated player to the attacker
@@ -592,6 +637,10 @@ class GameMaster:
 
                             # remove the eliminated player from the active players list
                             self.remove_player(defender)
+                    # check if victory condition is met
+                    if self.is_game_over():
+                        self.game_over = True
+                        return successful_attacks, self.game_over
                     
                     # Check if the attacker needs to trade cards
                     if len(self.player_cards[player.name]) > 5:
@@ -601,13 +650,13 @@ class GameMaster:
 
 
                 else:
-                    print("Player lost the attack")
+                    # print("Player lost the attack")
                     lost_attacks += 1
                 
             else:
                 invalid_attacks += 1
                 print(f"Moves are invalid:\n{error_msg}\nAsking for new moves")
-        return successful_attacks
+        return successful_attacks, self.game_over
 
     def validate_attack_move(
         self, player: 'PlayerAgent', 
@@ -720,6 +769,67 @@ class GameMaster:
                 troops_to_allocate -= 1
 
         return troop_placement
+    
+
+    def generate_random_troop_placement(
+        self, 
+        player: 'PlayerAgent', 
+        game_state: 'GameState', 
+        initial_placement: bool = False
+    ) -> List[Dict[str, int]]:
+        """
+        Generates a random troop placement for a player. The function will randomly
+        distribute the player's available troops across the territories they control.
+        
+        If `initial_placement` is True, the player only allocates 1 troop.
+
+        Parameters:
+        - player: The player for whom to generate the move.
+        - game_state: The current state of the game.
+        - initial_placement: A flag indicating whether this is the initial troop placement.
+        
+        Returns:
+        - A list of dictionaries representing the troop placement move. 
+        Each dictionary contains a territory name and the number of troops placed there.
+        """
+
+        # Get the list of territories the player controls
+        controlled_territories = game_state.get_player_territories(player.name)
+
+        # Total troops to allocate
+        troops_to_allocate = 1 if initial_placement else player.troops
+
+        # Initialize an empty list to store the troop placement moves
+        troop_placement = []
+
+        # Randomly distribute troops among controlled territories
+        for territory in controlled_territories:
+            if troops_to_allocate <= 0:
+                break
+
+            # For initial placement, only allocate 1 troop
+            if initial_placement:
+                troop_placement.append({'territory_name': territory, 'num_troops': 1})
+                break  # Only place one troop
+            else:
+                # Randomly decide the number of troops to place in the current territory
+                troops_for_this_territory = random.randint(1, troops_to_allocate)
+                troop_placement.append({'territory_name': territory, 'num_troops': troops_for_this_territory})
+
+                # Subtract the allocated troops from the total remaining troops
+                troops_to_allocate -= troops_for_this_territory
+
+        # If there are still troops remaining and it's not the initial placement, distribute them
+        if not initial_placement:
+            while troops_to_allocate > 0:
+                for move in troop_placement:
+                    if troops_to_allocate <= 0:
+                        break
+                    move['num_troops'] += 1
+                    troops_to_allocate -= 1
+
+        return troop_placement
+
         
     @track_turn_time
     def play_a_turn(self, player: 'PlayerAgent')-> None:
@@ -727,7 +837,8 @@ class GameMaster:
         # Phase 1: Troop Placement
         self.phase_1_troop_placement(player)
         self.phase_2_attack(player)
-        self.phase_3_fortify(player)
+        if not self.game_over:
+            self.phase_3_fortify(player)
         print(f"{player.name} has completed their turn.")
     
     def play_game(self, include_initial_troop_placement:bool = True
@@ -754,19 +865,12 @@ class GameMaster:
 
         while not self.is_game_over():
             print(f"this is the game_round var: {self.game_round}" )
-            print(f"this is the self.rules.max_rounds var: " +
-                  f"{self.rules.max_rounds}")
-            if self.game_round > self.rules.max_rounds:
-                print("Game over: Maximum rounds reached")
-                break
             self.game_round += 1
-           
-          
-            print(f'Starting round: {self.game_round}')
+
             print(f'This is the current game state:----------')
             print(self.game_state.territories_df)
             for player in self.active_players:
-                print(f"these are the active players_:{self.active_players}")
+                # print(f"these are the active players_:{self.active_players}")
                 # distribute some cards to test logic needs to be taken out
                 # just used for testing card logic
                 # if self.game_round == 1:
@@ -784,15 +888,15 @@ class GameMaster:
 
                 # check if the game is over
                 if self.is_game_over():
-                    self.winner = player
                     break
-
-
-        print("Game over")
-        if self.game_round > self.rules.max_rounds:
-            print(f"No winner after {self.rules.max_rounds} rounds")
-        else:
-            print(f"{self.winner.name} wins")
+ 
+        print(f"Game Over! The winner is {self.winner.name} by "+
+              f"{self.victory_condition}")
         print(f"Game lasted {self.game_round} rounds")
+        save_end_game_results(self.players, 
+                          self.winner.name if self.winner else None, 
+                          self.victory_condition, 
+                          self.game_round, 
+                          games_folder, self.game_state)
 
 

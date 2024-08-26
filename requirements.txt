@@ -11,3 +11,4 @@ pandas
 pytest
 requests
 seaborn
+scipy
