@@ -4,6 +4,7 @@ setup.py
 risk_game/__init__.py
 risk_game/card_deck.py
 risk_game/experiments.py
+risk_game/game_config.py
 risk_game/game_constants.py
 risk_game/game_master.py
 risk_game/game_state.py

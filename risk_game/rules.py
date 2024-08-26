@@ -1,20 +1,149 @@
 # rules.py
 from itertools import combinations
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 from risk_game.card_deck import Card
 from risk_game.game_constants import CONTINENT_BONUSES
+from risk_game.game_config import GameConfig
 
 
 class Rules:
-    def __init__(
-            self, progressive: bool = False,
-            capitals: bool = False, mode: str = "world_domination",
-            max_rounds: int = 50):
-        self.progressive = progressive
-        self.capitals = capitals
-        self.mode = mode
-        self.max_rounds = max_rounds
-        self.trade_count = 0  # Track the number of trades for progressive mode
+    def __init__(self, config: GameConfig) -> None:
+        self.progressive = config.progressive
+        self.capitals = config.capitals
+        self.territory_control_percentage = config.territory_control_percentage
+        self.required_continents = config.required_continents
+        self.key_areas = config.key_areas
+        self.max_rounds = config.max_rounds
+        self.trade_count = 0
+        
+        # Set mode based on territory_control_percentage
+        if self.territory_control_percentage == 1.0:
+            self.mode = "world_domination"
+        else:
+            self.mode = (
+                f"territory_control_"+
+                f"{int(self.territory_control_percentage * 100)}%")
+            
+    def __repr__(self) -> str:
+        key_areas_str = ', '.join(self.key_areas) if self.key_areas else 'None'
+        
+        # Start building the informative description
+        description = "<Rules("
+        
+        # Add progressive card rules information
+        description += f"Progressive cards: {'Enabled' if self.progressive else 'Disabled'}"
+        
+        # Add capitals rule information
+        if self.capitals:
+            description += ", Mode: Capitals - You need to conquer all capitals to win"
+        
+        # Add territory control percentage rule
+        description += f", Territory control required: {self.territory_control_percentage * 100:.1f}%"
+        
+        # Add required continents information if applicable
+        if self.required_continents:
+            description += f", Required continents to control: {self.required_continents}"
+        
+        # Add key areas information if any are defined
+        if self.key_areas:
+            description += f", Key areas to control: {key_areas_str}"
+        
+        # Add maximum rounds information if defined
+        if self.max_rounds:
+            description += f", Maximum rounds: {self.max_rounds}"
+        
+        # Add game mode information
+        description += f", Mode: {self.mode}"
+        
+        # Close the description
+        description += ")>"
+        
+        return description
+
+
+    def check_victory_conditions(self, game_state: "GameState", 
+        player: "PlayerAgent", current_round: int, 
+        active_players: List['PlayerAgent']
+    ) -> Tuple[bool, Optional[str], Optional[str]]:
+        
+        # Check for capital control victory condition
+        if self.capitals and self.check_capital_control(game_state, player):
+            return True, player.name, "Capital Control"
+        
+        # Check other victory conditions
+        if (self.territory_control_percentage == 1.0 and 
+            self.check_world_domination(game_state, player)):
+            return True, player.name, "World Domination"
+        
+        if (self.territory_control_percentage < 1.0 and 
+            self.check_territory_control_percentage(game_state, player)):
+            return True, player.name, (f"Territory Control "+
+                f"{int(self.territory_control_percentage * 100)}%")
+        
+        if (self.required_continents > 0 and 
+            self.check_continent_control(game_state, player)):
+            return True, player.name, "Continent Control"
+        
+        if self.key_areas and self.check_key_areas_control(game_state, player):
+            return True, player.name, "Key Areas Control"
+        
+        # Check for turn count-based victory condition
+        if current_round >= self.max_rounds:
+            winner = self.determine_winner_by_territory_control(
+                game_state, active_players)
+            return True, winner.name, "Max Rounds Reached - Territory Control"
+        
+        return False, None, None  # No victory condition met
+
+    def check_capital_control(self, game_state: "GameState", 
+        player: "PlayerAgent") -> bool:
+        # Check if the player controls all capitals in the game
+        for capital in game_state.capitals.values():
+            if not game_state.check_terr_control(player.name, capital):
+                return False
+        return True  # Player controls all capitals
+
+    def check_world_domination(self, game_state: "GameState",
+        player: "PlayerAgent") -> bool:
+        player_territories = game_state.get_player_territories(player.name)
+        return len(player_territories) == len(game_state.territories_df)
+
+    def check_territory_control_percentage(self, game_state: "GameState", 
+        player: "PlayerAgent") -> bool:
+        total_territories = len(game_state.territories_df)
+        player_territories = len(game_state.get_player_territories(player.name))
+        print(f"player_territories: {player_territories}")
+        print(f"total_territories: {total_territories}")    
+        print(f"territory_control_percentage: {self.territory_control_percentage}")
+        
+        return player_territories / total_territories >= self.territory_control_percentage
+    
+    def check_continent_control(self, game_state: "GameState", 
+        player: "PlayerAgent") -> bool:
+        controlled_continents = 0
+        for continent, (territories, _) in CONTINENT_BONUSES.items():
+            if all(territory in game_state.get_player_territories(player.name) for territory in territories):
+                controlled_continents += 1
+        return controlled_continents >= self.required_continents
+
+    def check_key_areas_control(self, game_state: "GameState", 
+        player: "PlayerAgent") -> bool:
+        player_territories = game_state.get_player_territories(player.name)
+        return all(area in player_territories for area in self.key_areas)
+    
+    def determine_winner_by_territory_control(self, game_state: "GameState", 
+        active_players: List["PlayerAgent"]) -> "PlayerAgent":
+
+        # Determine the player with the most territories
+        max_territories = -1
+        potential_winner = None
+        for player in active_players:
+            player_territories = len(
+                game_state.get_player_territories(player.name))
+            if player_territories > max_territories:
+                max_territories = player_territories
+                potential_winner = player
+        return potential_winner
 
     def verify_card_combination(self, cards: List[Card], player_name: str, 
         game_state: "GameState"
@@ -92,7 +221,9 @@ class Rules:
             return True, 
         # If none of the above, the combination is invalid
         return False
-
+    
+    def increment_trade_count(self)-> None:
+        self.trade_count += 1
     
     def calculate_progressive_troops(self) -> int:
         # Progressive troop schedule based on the trade count
@@ -111,7 +242,6 @@ class Rules:
         elif self.trade_count >= 6:
             troops = self.trade_count*5 - 10  # Increase by 5 troops after 6.
 
-        self.trade_count += 1  # Increment trade count after each trade
         return troops
 
     def reset_trade_count(self):

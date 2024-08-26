@@ -1,5 +1,6 @@
 from collections import deque
 import pandas as pd
+import math
 import numpy as np
 import random
 from typing import Dict, List, Optional, Tuple
@@ -8,14 +9,17 @@ TERRITORY_CONNECTIONS
 
 class GameState:
     def __init__(self,
-                 players: List['PlayerAgent']) -> None: 
+                 players: List['PlayerAgent'], rules: 'Rules') -> None: 
         self.num_players: int = len(players)
         # Initialize to -1 indicating no player has acted yet
         self.last_player_index: int = -1
         self.capitals: Dict[str, str] = {} # store capitals for each player
         self.territories_df: pd.DataFrame = self._init_territories_df(players)
         # Graph of territory connections
-        self.territories_graph: Dict[str, List[str]] = TERRITORY_CONNECTIONS  
+        self.territories_graph: Dict[str, List[str]] = TERRITORY_CONNECTIONS 
+        self.rules = rules
+        self.territories_required_to_win = math.ceil(
+            self.rules.territory_control_percentage * len(TERRITORIES))
     
     def _init_territories_df(self, players: List['PlayerAgent']) -> pd.DataFrame:
         # Use player names for columns

@@ -9,16 +9,19 @@ class OpenAIClient(LLMClient):
         self.client = OpenAI()
         
         if model_number == 1:
-            self.model_type = "gpt-4o"
+            model_type = "gpt-4o"
         elif model_number == 2:
-            self.model_type = "gpt-3.5-turbo-0125"
+            model_type = "gpt-4o-mini"
+        elif model_number == 3:
+            model_type = "gpt-3.5-turbo-0125"
+        
         else:
             raise ValueError("Invalid model number. Please choose a number " +
                              "between 1 and 2.")
+        # Call the parent class constructor to set provider and model_type
+        super().__init__(provider_name="OpenAI", model_type=model_type)
     
     def get_chat_completion(self, message_content) -> str:
-        max_retries = 3  # Maximum number of retry attempts
-        retry_delay = 5   # Delay in seconds between retries
         messages = [
         {"role": "system", 
          "content": "You are a master strategist and Risk player with 20 years experience."},
@@ -28,7 +31,7 @@ class OpenAIClient(LLMClient):
         }
     ]
 
-        for attempt in range(max_retries):
+        for attempt in range(self.max_retries):
             try:
                 response = self.client.chat.completions.create(
                     model=self.model_type,
@@ -39,8 +42,8 @@ class OpenAIClient(LLMClient):
                 return response.choices[0].message.content
             except InternalServerError as e:
                 print(f"Attempt {attempt + 1} failed with API error: {e}." +
-                      f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
+                      f"Retrying in {self.retry_delay} seconds...")
+                time.sleep(self.retry_delay)
             except Exception as e:
                 print(f"Unexpected error: {e}")
                 break

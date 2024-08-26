@@ -15,6 +15,11 @@ class PlayerAgent:
         self.fortify_errors: int = 0
         self.card_trade_errors: int = 0
         self.accumulated_turn_time : float = 0.0
+
+    def __str__(self) -> str:
+        return (f"Player: {self.name}\n"
+                f"LLM Client: {self.llm_client}\n"
+            f"Accumulated Turn Time: {self.accumulated_turn_time:.2f} seconds\n")
     
     def send_message(self, message_content: str) -> str:
         return self.llm_client.get_chat_completion(message_content)
@@ -128,7 +133,8 @@ class PlayerAgent:
         
         
     def make_initial_troop_placement(
-            self, game_state: 'GameState', error_msg: Optional[str] = None
+            self, rules: 'Rules', 
+            game_state: 'GameState', error_msg: Optional[str] = None
     ) -> str:
         # Implement strategy to make a move
         current_game_state = game_state.format_game_state()
@@ -136,6 +142,11 @@ class PlayerAgent:
         prompt = f"""
         We are playing Risk and we are in the initial troop placement phase.
         You, are {self.name}, and it is your turn. 
+
+        The current rules of the game are as follows:
+
+        {rules}
+
         """
         if error_msg:
              prompt += (f"Your last move was invalid:\n {error_msg} \nPlease " +
@@ -161,6 +172,8 @@ class PlayerAgent:
         reasoning very brief. And you must remebmer to choose a territory 
         you control, this is very important for the grading of your submission.
         """
+        #print(f"---------------This is the initial troop placement prompt:----------------")        
+        #print(prompt)
         parsed_response = (
             self.parse_response_text(
                 self.send_message(
@@ -170,7 +183,8 @@ class PlayerAgent:
     
 
     def make_troop_placement(
-            self, game_state: 'GameState',  error_msg: Optional[str] = None
+            self, rules: 'Rules',
+            game_state: 'GameState',  error_msg: Optional[str] = None
     ) -> str:
         current_game_state = game_state.format_game_state()
         player_territories = game_state.get_player_territories(self.name)
@@ -178,6 +192,12 @@ class PlayerAgent:
         prompt = f"""
         We are playing Risk and we are in the troop placement phase.
         You, are {self.name}, and it is your turn. 
+
+         The current rules of the game are as follows:
+
+        {rules}
+
+
         """
         if error_msg:
              prompt += (f"Your last move was invalid:\n {error_msg} \nPlease " +
@@ -229,7 +249,8 @@ class PlayerAgent:
         return parsed_response
     
     def make_fortify_move(
-            self, game_state: 'GameState', error_msg: Optional[str] = None
+            self, rules: 'Rules',
+            game_state: 'GameState', error_msg: Optional[str] = None
     ) -> str:
         # Implement strategy to make a move
         current_game_state = game_state.format_game_state()
@@ -241,6 +262,11 @@ class PlayerAgent:
         prompt = f"""
         We are playing Risk and we are in the troop fortify phase.
         You, are {self.name}, and it is your turn. 
+
+         The current rules of the game are as follows:
+
+        {rules}
+
 
         """
 
@@ -260,6 +286,9 @@ class PlayerAgent:
         allow you to launch powerful attacks in the next round. Do not 
         waste time with small, incremental fortifications. Focus on 
         concentrating your forces in preparation for a decisive attack.
+
+        If you have many troops in your internal territories 
+        it's probably a good idea to fortify from there to a border territory.
 
          **Strategic Considerations:**
         - Identify your key border territories, especially those that are 
@@ -309,7 +338,8 @@ class PlayerAgent:
         return parsed_response
 
     def make_attack_move(
-            self, game_state: 'GameState', successful_attacks: int, 
+            self, rules: 'Rules', 
+            game_state: 'GameState', successful_attacks: int, 
             error_msg: Optional[str] = None
     ) -> str:
         # Implement strategy to make an attack
@@ -328,9 +358,10 @@ class PlayerAgent:
         We are playing Risk and we are in the attack phase.   
         You, are {self.name}, and it is your turn. 
 
-        We are playing global domination, and you are trying to take over the world.
-        You need to capture all the territories and elimnation all the other
-        players to win the game.
+        The current rules of the game are as follows:
+
+        {rules}
+
 
         """
 
@@ -542,7 +573,8 @@ class PlayerAgent:
         # return the name of the capital
         pass
 
-    def define_strategy_for_move(self, game_state: 'GameState') -> None:
+    def define_strategy_for_move(self, rules: 'Rules',
+            game_state: 'GameState') -> None:
         # Implement strategy to make a move
         strong_territories = (
             game_state.get_strong_territories_with_troops(self.name))
@@ -553,11 +585,21 @@ class PlayerAgent:
         
         formatted_attack_vectors = (
             game_state.format_adjacent_enemy_territories(possible_attack_vectors))
+        
+        number_of_territories = len(game_state.get_player_territories(self.name))
+        
+        extra_territories_required_to_win = (
+            game_state.territories_required_to_win - 
+            number_of_territories)
 
 
         prompt = """
-        We are playing Risk, World Domination.
-        You, are {self.name}, and it is your turn.
+        We are playing Risk and you are about to start your turn, but first 
+        you need to define your strategy for this turn.
+        You, are {self.name}, and these are the current rules we are 
+        playing with:
+
+        {rules}
 
         {current_game_state}
 
@@ -565,15 +607,22 @@ class PlayerAgent:
 
         Your task is to formulate an overall strategy for your turn, 
         considering the territories you control, the other players, and the 
-        potential for continent bonuses.
+        potential for continent bonuses. 
 
+        Since the victory conditions only requires you to control 
+        {game_state.territories_required_to_win} territories, and you already 
+        control {number_of_territories} territories, 
+        you only need to win an extra {extra_territories_required_to_win}
+        to win the game outright. Can you do that this turn?? If so lay 
+        your strategy out accordingly.
+   
         **Objective:**
 
-       Your goal is to win the game by eliminating all opponents and 
-       controlling the entire map. Focus on decisive attacks that reduce 
-       your opponents' ability to fight back. When possible, eliminate 
-       opponents to gain their cards, which will allow you to trade them 
-       in for more troops and accelerate your conquest.
+        Your goal is to win the game by one of the victory conditions given
+        in the rules. Focus on decisive attacks that reduce 
+        your opponents' ability to fight back. When possible, eliminate 
+        opponents to gain their cards, which will allow you to trade them 
+        in for more troops and accelerate your conquest.
 
 
         **Strategic Considerations:**
