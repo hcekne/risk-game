@@ -54,8 +54,11 @@ Feel free to submit issues or pull requests.
 
 ## TODO
 - [ ] Task 0: Implement Game history
-- [ ] Task 4: Create pixelated map of the risk world
-- [ ] Task 5: Create some dashboard where you can look through game states
+- [ ] Task 4: Add tests to the project
+- [ ] Task 6: Consider creating a better way to follow games and watch the players
+- [ ] Task 7: Create pixelated map of the risk world
+- [ ] Task 8: Create some dashboard where you can look through game states
+- [ ] Task 9: Consider adding in different agents with more enhanced and stratgic prompts
 
 
 
