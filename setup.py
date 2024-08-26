@@ -7,12 +7,7 @@ def read_requirements():
 
 setup(
     name="risk_game",
-    version="0.1",
+    version="0.2",
     packages=find_packages(),
     install_requires=read_requirements(),
-    entry_points={
-        'console_scripts': [
-            'start-game=scripts.run_game:main',
-        ],
-    },
 )

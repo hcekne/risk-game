@@ -1,3 +1,5 @@
+# Example 1
+
 from risk_game.experiments import Experiment
 from risk_game.game_config import GameConfig
 
