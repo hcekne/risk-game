@@ -1,2 +1,0 @@
-[console_scripts]
-start-game = scripts.run_game:main
