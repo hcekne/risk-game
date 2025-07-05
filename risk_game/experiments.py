@@ -75,6 +75,15 @@ class Experiment:
                         llm_client=llm_client.create_llm_client("Anthropic", 1))
             game.add_player(name="gpt-4o", 
                         llm_client=llm_client.create_llm_client("OpenAI", 1))
+
+        elif self.agent_mix == 6:
+            # Add mix extra strong AI players
+            game.add_player(name="Claude_Sonnet_3_5", 
+                        llm_client=llm_client.create_llm_client("Anthropic", 1))
+            game.add_player(name="gpt-4o", 
+                        llm_client=llm_client.create_llm_client("OpenAI", 1))
+            game.add_player(name="Medium(gpt-4o-mini)", 
+                        llm_client=llm_client.create_llm_client("OpenAI", 2))
           
 
 

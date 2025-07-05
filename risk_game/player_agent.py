@@ -342,6 +342,9 @@ class PlayerAgent:
             game_state: 'GameState', successful_attacks: int, 
             error_msg: Optional[str] = None
     ) -> str:
+        # Get strategic advice from knowledge base
+        strategic_advice = self._get_strategic_advice(game_state)
+
         # Implement strategy to make an attack
         current_game_state = game_state.format_game_state()
         strong_territories = (
@@ -361,6 +364,10 @@ class PlayerAgent:
         The current rules of the game are as follows:
 
         {rules}
+
+
+        **STRATEGIC GUIDANCE:**
+        {strategic_advice}
 
 
         """
@@ -687,7 +694,63 @@ class PlayerAgent:
 
         self.turn_strategy = parsed_response
 
+    def _get_strategic_advice(self, game_state: 'GameState') -> str:
+        """Get relevant strategic advice from the knowledge base"""
+        try:
+            from qdrant_client import QdrantClient
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            from sentence_transformers import SentenceTransformer
+            
+            # Connect to knowledge base
+            client = QdrantClient(host="qdrant", port=6333, check_compatibility=False)
+            embedder = SentenceTransformer("all-MiniLM-L6-v2")
+            
+            # Determine current game phase and card situation
+            num_territories = len(game_state.get_player_territories(self.name))
+            phase = "early" if num_territories < 10 else ("mid" if num_territories < 20 else "late")
+            
+            # For now, assume mid card bucket - you can enhance this logic later
+            card_bucket = "mid"
+            
+            # Query for relevant strategic advice
+            query_vector = embedder.encode("attack strategy elimination timing").tolist()
+            
+            # Get strategies for current phase and card situation
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                results = client.search(
+                    collection_name="risk_tactics_kb",
+                    query_vector=query_vector,
+                    query_filter=Filter(
+                        must=[
+                            FieldCondition(key="phase", match=MatchValue(value=phase)),
+                            FieldCondition(key="card_bucket", match=MatchValue(value=card_bucket))
+                        ]
+                    ),
+                    limit=2
+                )
+            
+            if not results:
+                return "Focus on strategic attacks that maximize territorial gain while minimizing losses."
+            
+            # Format the top 2 strategic snippets
+            advice = "Based on expert Risk strategy:\n\n"
+            for i, result in enumerate(results[:2], 1):
+                snippet = result.payload['snippet']
+                # Remove the snippet title for cleaner integration
+                clean_snippet = snippet.split('\n', 1)[1] if '\n' in snippet else snippet
+                advice += f"{i}. {clean_snippet}\n\n"
+            
+            return advice.strip()
+            
+        except Exception as e:
+            # Fallback if knowledge base is unavailable
+            print(f"Warning: Could not access strategic knowledge base: {e}")
+            return "Focus on strategic attacks that maximize territorial gain while minimizing losses."
+
 def choose_capital(self, game_state: 'GameState') -> str:
     # Implement strategy to choose a capital
     # return the name of the capital
     pass
+

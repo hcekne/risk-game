@@ -4,11 +4,11 @@ from risk_game.experiments import Experiment
 from risk_game.game_config import GameConfig
 
 # Correct: Creating an instance of GameConfig
-config = GameConfig(progressive=True, capitals=False, max_rounds=17)
+config = GameConfig(progressive=True, capitals=False, max_rounds=10)
 
 
 # Run a single game with default options
-experiment = Experiment(config, agent_mix=1, num_games=2)
+experiment = Experiment(config, agent_mix=6, num_games=2)
 experiment
 
 print(experiment)
