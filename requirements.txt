@@ -12,3 +12,9 @@ pytest
 requests
 seaborn
 scipy
+
+
+sentence-transformers>=2.7.0   # local embeddings
+torch>=2.0.0                   # pulled automatically; CPU is fine
+qdrant-client>=1.9.0
+tiktoken                        # still helpful for chunking

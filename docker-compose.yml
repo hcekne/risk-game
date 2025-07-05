@@ -1,3 +1,6 @@
+
+version: "3.9"
+
 services:
   risk-game:
     build:
@@ -6,19 +9,31 @@ services:
         USER_NAME: ${USER_NAME}
         USER_ID: ${USER_ID}
         GROUP_ID: ${GROUP_ID}
-    image: risk-game:latest  # Specify the image name
-    env_file:
-      - .env  # Load the environment variables from the .env file
+    image: risk-game:latest
     container_name: risk-game-container
-    user: "${USER_NAME}"  # Run as the user specified
+    user: "${USER_NAME}"
+    env_file:
+      - .env
     volumes:
-      - .:/app  # Mount the current directory to /app in the container
-      - ./custom_startup.sh:/usr/local/bin/custom_startup.sh # custom startup script to install codebase
+      - .:/app
+      - ./custom_startup.sh:/usr/local/bin/custom_startup.sh
     ports:
       - "8000:80"
     environment:
       - USER_ID=${USER_ID}
       - GROUP_ID=${GROUP_ID}
-      - USER_NAME=${USER_NAME}  # Set the username
+      - USER_NAME=${USER_NAME}
+    depends_on:
+      - qdrant
     entrypoint: ["/usr/local/bin/custom_startup.sh"]
     command: ["tail", "-f", "/dev/null"]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    # Bind-mount to project-local directory
+    volumes:
+      - ./data/qdrant/:/qdrant/storage
+    restart: unless-stopped

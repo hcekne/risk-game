@@ -13,3 +13,6 @@ __pycache__/
 game_results/game__*
 
 game_results/experiment0*
+
+
+data/qdrant/*

@@ -11,3 +11,7 @@ pytest
 requests
 seaborn
 scipy
+sentence-transformers>=2.7.0
+torch>=2.0.0
+qdrant-client>=1.9.0
+tiktoken
