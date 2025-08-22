@@ -1,5 +1,9 @@
 # Risk Game AI
 
+## CRITICAL UPDATE 21.08.2025 ##
+
+Model needs to be updated with the latest models from the LLM providers to run properly. For example, need to update to the GPT-5 model version
+
 ## Overview
 This project implements a simplified version of the Risk board game with AI players.
 
