@@ -17,8 +17,6 @@ services:
     volumes:
       - .:/app
       - ./custom_startup.sh:/usr/local/bin/custom_startup.sh
-    ports:
-      - "8000:80"
     environment:
       - USER_ID=${USER_ID}
       - GROUP_ID=${GROUP_ID}

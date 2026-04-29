@@ -1,0 +1,47 @@
+import argparse
+import json
+
+from risk_game.utils.experiment_batch import (
+    build_status_line,
+    find_latest_experiment_folder,
+    load_experiment_context,
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Print a compact status line for an experiment batch."
+    )
+    parser.add_argument(
+        "--experiment-folder",
+        help="Explicit experiment folder. Defaults to the latest under --base-folder.",
+    )
+    parser.add_argument(
+        "--base-folder",
+        default="game_results/experiments",
+        help="Base directory searched when --experiment-folder is omitted.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the raw status JSON instead of a compact line.",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    experiment_folder = (
+        args.experiment_folder
+        if args.experiment_folder
+        else str(find_latest_experiment_folder(args.base_folder))
+    )
+    context = load_experiment_context(experiment_folder)
+    if args.json:
+        print(json.dumps(context["status"], indent=2))
+        return
+    print(build_status_line(context["status"]))
+
+
+if __name__ == "__main__":
+    main()

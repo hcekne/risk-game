@@ -4,7 +4,10 @@ FROM python:3.11-slim
 RUN apt-get update && \
 	apt-get install -y \
 	nano \
-	git
+	git \
+	make \
+	sudo && \
+	rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app
@@ -27,7 +30,10 @@ ARG GROUP_ID
 
 # Create a non-root user with home directory
 RUN groupadd -g $GROUP_ID $USER_NAME && \
-	useradd -u $USER_ID -g $GROUP_ID -m -d /home/$USER_NAME -s /bin/bash $USER_NAME
+	useradd -u $USER_ID -g $GROUP_ID -m -d /home/$USER_NAME -s /bin/bash $USER_NAME && \
+	usermod -aG sudo $USER_NAME && \
+	echo "$USER_NAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USER_NAME && \
+	chmod 0440 /etc/sudoers.d/$USER_NAME
 
 # Set permissions for the working directory
 RUN chown -R $USER_NAME:$USER_NAME /app

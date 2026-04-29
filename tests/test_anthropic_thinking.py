@@ -1,4 +1,7 @@
+import pytest
 from risk_game.llm_clients.anthropic_client import AnthropicClient
+
+pytestmark = pytest.mark.live_api
 
 def test_anthropic_thinking():
     """Quick test of Anthropic client with and without thinking"""
@@ -8,9 +11,24 @@ def test_anthropic_thinking():
     
     # Test cases
     test_cases = [
-        {"model": 1, "thinking": False, "desc": "Claude Opus 4.1 (no thinking)"},
-        {"model": 1, "thinking": True, "desc": "Claude Opus 4.1 (with thinking)"},
-        {"model": 4, "thinking": True, "desc": "Claude 3.5 Sonnet (thinking ignored)"}
+        {
+            "model_name": "claude-sonnet-4-6",
+            "thinking": False,
+            "thinking_effort": None,
+            "desc": "Claude Sonnet 4.6 (no thinking)",
+        },
+        {
+            "model_name": "claude-sonnet-4-6",
+            "thinking": True,
+            "thinking_effort": "medium",
+            "desc": "Claude Sonnet 4.6 (adaptive thinking)",
+        },
+        {
+            "model_name": "claude-haiku-4-5-20251001",
+            "thinking": True,
+            "thinking_effort": None,
+            "desc": "Claude Haiku 4.5 (manual thinking)",
+        },
     ]
     
     simple_prompt = "In Risk, should I attack with 3 armies vs 1 defender? Answer in 30 words."
@@ -20,9 +38,10 @@ def test_anthropic_thinking():
         
         try:
             client = AnthropicClient(
-                model_number=test['model'],
+                model_name=test["model_name"],
                 enable_thinking=test['thinking'],
-                thinking_budget=2000
+                thinking_budget=2000,
+                thinking_effort=test["thinking_effort"],
             )
             
             print(f"  Model: {client.model_type}")

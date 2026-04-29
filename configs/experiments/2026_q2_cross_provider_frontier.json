@@ -1,0 +1,28 @@
+[
+  {
+    "name": "gpt-5.5",
+    "provider": "OpenAI",
+    "model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "verbosity": "low"
+  },
+  {
+    "name": "claude-opus-4-7",
+    "provider": "Anthropic",
+    "model": "claude-opus-4-7",
+    "enable_thinking": false,
+    "thinking_effort": null
+  },
+  {
+    "name": "gemini-3.1-pro-preview",
+    "provider": "Gemini",
+    "model": "gemini-3.1-pro-preview",
+    "reasoning_effort": "medium"
+  },
+  {
+    "name": "kimi-k2.6",
+    "provider": "Moonshot",
+    "model": "kimi-k2.6",
+    "enable_thinking": false
+  }
+]

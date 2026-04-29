@@ -26,7 +26,7 @@ class GroqClient(LLMClient):
     def get_chat_completion(self, message_content: str) -> str:
         full_prompt = [
             {"role": "system", 
-            "content": "You are a master strategist and Risk player with 20 years experience."},
+            "content": self.system_prompt},
             {
                 "role": "user",
                 "content": message_content

@@ -20,7 +20,7 @@ class BedrockClient(LLMClient):
     def get_chat_completion(self, message_content: str) -> str:
 
         full_prompt = {
-            "prompt": message_content,
+            "prompt": f"SYSTEM:\\n{self.system_prompt}\\n\\nUSER:\\n{message_content}",
             "max_gen_len": 2000,
             "temperature": 1,
             "top_p": 1

@@ -157,6 +157,15 @@ class GameState:
     def get_player_territories(self, player_name: str) -> List[str]:
         return list(self.territories_df[
             self.territories_df[f'{player_name}'] > 0]['Territory']) 
+
+    def get_player_territories_with_troops(
+        self, player_name: str
+    ) -> List[Tuple[str, int]]:
+        territories = self.territories_df[self.territories_df[f"{player_name}"] > 0]
+        return [
+            (row["Territory"], int(row[player_name]))
+            for _, row in territories.iterrows()
+        ]
     
     def has_remaining_territories(self, player_name: str) -> bool:
         return len(self.get_player_territories(player_name)) > 0     
@@ -324,6 +333,324 @@ class GameState:
             formatted_game_state += "\n"  # Add a blank line between continents
         
         return formatted_game_state
+
+    def get_player_aliases(self) -> Dict[str, str]:
+        return {
+            player_name: f"P{index + 1}"
+            for index, player_name in enumerate(self.territories_df.columns[1:])
+        }
+
+    def get_player_status(self, player_name: str) -> Dict[str, object]:
+        territories = self.get_player_territories(player_name)
+        controlled_continents = [
+            continent
+            for continent, (continent_territories, _) in CONTINENT_BONUSES.items()
+            if all(territory in territories for territory in continent_territories)
+        ]
+        return {
+            "territories": len(territories),
+            "troops": self.get_sum_of_player_troops(player_name),
+            "capital": self.capitals.get(player_name),
+            "continents": controlled_continents,
+        }
+
+    def get_continent_progress(
+        self, player_name: str
+    ) -> List[Tuple[str, int, int, int]]:
+        progress = []
+        player_territories = set(self.get_player_territories(player_name))
+        for continent, (territories, bonus) in CONTINENT_BONUSES.items():
+            controlled = sum(1 for territory in territories if territory in player_territories)
+            progress.append((continent, controlled, len(territories), bonus))
+
+        progress.sort(key=lambda item: (item[1] / item[2], item[1], item[3]), reverse=True)
+        return progress
+
+    def get_border_territories(
+        self, player_name: str
+    ) -> List[Tuple[str, int, List[Tuple[str, str, int]]]]:
+        border_territories = []
+        for territory in sorted(self.get_player_territories(player_name)):
+            enemy_neighbors = []
+            for neighbor in sorted(self.territories_graph.get(territory, [])):
+                control = self.get_territory_control(neighbor)
+                if control is None:
+                    continue
+                owner, troops = control
+                if owner != player_name:
+                    enemy_neighbors.append((neighbor, owner, troops))
+
+            if enemy_neighbors:
+                border_territories.append(
+                    (
+                        territory,
+                        self.check_number_of_troops(player_name, territory),
+                        enemy_neighbors,
+                    )
+                )
+
+        border_territories.sort(
+            key=lambda item: (len(item[2]), item[1], item[0]),
+            reverse=True,
+        )
+        return border_territories
+
+    def get_interior_reserves(self, player_name: str) -> List[Tuple[str, int]]:
+        interior_reserves = []
+        for territory, movable_troops in self.get_strong_territories_with_troops(player_name):
+            if all(
+                self.check_terr_control(player_name, neighbor)
+                for neighbor in self.territories_graph.get(territory, [])
+            ):
+                interior_reserves.append((territory, movable_troops))
+
+        interior_reserves.sort(key=lambda item: (item[1], item[0]), reverse=True)
+        return interior_reserves
+
+    def get_fortify_options(
+        self, player_name: str
+    ) -> Dict[str, List[Tuple[str, int, int]]]:
+        border_targets = [territory for territory, _, _ in self.get_border_territories(player_name)]
+        fortify_options = {}
+
+        for from_territory, movable_troops in self.get_strong_territories_with_troops(player_name):
+            legal_targets = []
+            for target_territory in border_targets:
+                if target_territory == from_territory:
+                    continue
+                if self.are_territories_connected(player_name, from_territory, target_territory):
+                    enemy_count = sum(
+                        1
+                        for neighbor in self.territories_graph[target_territory]
+                        if not self.check_terr_control(player_name, neighbor)
+                    )
+                    legal_targets.append(
+                        (
+                            target_territory,
+                            self.check_number_of_troops(player_name, target_territory),
+                            enemy_count,
+                        )
+                    )
+
+            legal_targets.sort(key=lambda item: (item[2], item[1], item[0]), reverse=True)
+            if legal_targets:
+                fortify_options[from_territory] = legal_targets
+
+        return fortify_options
+
+    def format_world_map_compact(self) -> str:
+        aliases = self.get_player_aliases()
+        lines = ["World map by continent (territory=player_alias:troops):"]
+        for continent, (territories, bonus) in CONTINENT_BONUSES.items():
+            territory_parts = []
+            for territory in territories:
+                control = self.get_territory_control(territory)
+                if control is None:
+                    territory_parts.append(f"{territory}=_:0")
+                    continue
+                owner, troops = control
+                territory_parts.append(f"{territory}={aliases.get(owner, owner)}:{troops}")
+            lines.append(f"- {continent}(+{bonus}): " + " | ".join(territory_parts))
+
+        return "\n".join(lines)
+
+    def format_player_territory_list(
+        self, player_name: str, sort_desc: bool = True, limit: Optional[int] = None
+    ) -> str:
+        territories_with_troops = self.get_player_territories_with_troops(player_name)
+        territories_with_troops.sort(
+            key=lambda item: (item[1], item[0]),
+            reverse=sort_desc,
+        )
+        if limit is not None:
+            territories_with_troops = territories_with_troops[:limit]
+
+        if not territories_with_troops:
+            return "none"
+
+        return ", ".join(
+            f"{territory}({troops})"
+            for territory, troops in territories_with_troops
+        )
+
+    def get_territory_continent(self, territory: str) -> Optional[str]:
+        for continent, (territories, _) in CONTINENT_BONUSES.items():
+            if territory in territories:
+                return continent
+        return None
+
+    def format_placement_targets_with_context(
+        self,
+        player_name: str,
+        limit: Optional[int] = None,
+    ) -> str:
+        aliases = self.get_player_aliases()
+        border_lookup = {
+            territory: (troops, enemy_neighbors)
+            for territory, troops, enemy_neighbors in self.get_border_territories(player_name)
+        }
+        target_lines: list[tuple[tuple[int, int, int, str], str]] = []
+
+        for territory, troops in self.get_player_territories_with_troops(player_name):
+            continent = self.get_territory_continent(territory) or "Unknown"
+            if territory in border_lookup:
+                _, enemy_neighbors = border_lookup[territory]
+                enemy_preview = ", ".join(
+                    f"{neighbor} {aliases[owner]}({enemy_troops})"
+                    for neighbor, owner, enemy_troops in enemy_neighbors[:3]
+                )
+                line = (
+                    f"- {territory}({troops}) [{continent}] "
+                    f"enemy_neighbors={len(enemy_neighbors)}"
+                )
+                if enemy_preview:
+                    line += f" -> {enemy_preview}"
+                sort_key = (0, -len(enemy_neighbors), -troops, territory)
+            else:
+                line = f"- {territory}({troops}) [{continent}] interior"
+                sort_key = (1, 0, -troops, territory)
+            target_lines.append((sort_key, line))
+
+        target_lines.sort(key=lambda item: item[0])
+        if limit is not None:
+            target_lines = target_lines[:limit]
+
+        if not target_lines:
+            return "- none"
+
+        return "\n".join(line for _, line in target_lines)
+
+    def format_placement_state_for_player(self, player_name: str) -> str:
+        aliases = self.get_player_aliases()
+        player_status = self.get_player_status(player_name)
+        opponent_statuses = [
+            (other_player, self.get_player_status(other_player))
+            for other_player in self.territories_df.columns[1:]
+            if other_player != player_name
+        ]
+        leader_name, leader_status = max(
+            opponent_statuses + [(player_name, player_status)],
+            key=lambda item: (item[1]["territories"], item[1]["troops"]),
+        )
+        remaining_to_win = max(
+            self.territories_required_to_win - player_status["territories"],
+            0,
+        )
+
+        lines = [
+            "Placement snapshot:",
+            (
+                f"You hold {player_status['territories']} territories and "
+                f"{player_status['troops']} troops on board."
+            ),
+            (
+                f"Win target: {self.territories_required_to_win}/{len(TERRITORIES)} "
+                f"territories; need {remaining_to_win} more."
+            ),
+            (
+                f"Current leader: {aliases[leader_name]} ({leader_name}) "
+                f"terr={leader_status['territories']} troops={leader_status['troops']}"
+            ),
+            "",
+            "Continent progress:",
+        ]
+
+        for continent, controlled, total, bonus in self.get_continent_progress(player_name):
+            lines.append(f"- {continent}(+{bonus}): {controlled}/{total}")
+
+        lines.extend(["", "Top pressure points:"])
+        border_territories = self.get_border_territories(player_name)
+        if border_territories:
+            for territory, troops, enemy_neighbors in border_territories[:6]:
+                continent = self.get_territory_continent(territory) or "Unknown"
+                enemy_preview = ", ".join(
+                    f"{neighbor} {aliases[owner]}({enemy_troops})"
+                    for neighbor, owner, enemy_troops in enemy_neighbors[:3]
+                )
+                line = (
+                    f"- {territory}({troops}) [{continent}] "
+                    f"enemy_neighbors={len(enemy_neighbors)}"
+                )
+                if enemy_preview:
+                    line += f" -> {enemy_preview}"
+                lines.append(line)
+        else:
+            lines.append("- none")
+
+        return "\n".join(lines)
+
+    def format_game_state_for_player(
+        self, player_name: str, include_world_map: bool = True
+    ) -> str:
+        aliases = self.get_player_aliases()
+        player_status = self.get_player_status(player_name)
+        ordered_players = [player_name] + [
+            other_player
+            for other_player in self.territories_df.columns[1:]
+            if other_player != player_name
+        ]
+
+        lines = [
+            "Game snapshot:",
+            "Player key: " + ", ".join(
+                f"{alias}={name}" for name, alias in aliases.items()
+            ),
+            (
+                f"You are {aliases[player_name]} ({player_name}). "
+                f"Win target: {self.territories_required_to_win}/{len(TERRITORIES)} territories. "
+                f"You hold {player_status['territories']} and need "
+                f"{max(self.territories_required_to_win - player_status['territories'], 0)} more."
+            ),
+            "",
+            "Standings:",
+        ]
+
+        for current_player in ordered_players:
+            current_status = self.get_player_status(current_player)
+            status_line = (
+                f"- {aliases[current_player]} ({current_player}): "
+                f"terr={current_status['territories']} "
+                f"troops={current_status['troops']}"
+            )
+            if current_status["capital"]:
+                status_line += f" capital={current_status['capital']}"
+            if current_status["continents"]:
+                status_line += (
+                    " continents=" + ",".join(current_status["continents"])
+                )
+            lines.append(status_line)
+
+        lines.extend(["", "Your continent progress:"])
+        for continent, controlled, total, bonus in self.get_continent_progress(player_name):
+            lines.append(f"- {continent}(+{bonus}): {controlled}/{total}")
+
+        border_territories = self.get_border_territories(player_name)
+        lines.extend(["", "Your borders:"])
+        if border_territories:
+            for territory, troops, enemy_neighbors in border_territories[:8]:
+                enemy_text = ", ".join(
+                    f"{neighbor} {aliases[owner]}({enemy_troops})"
+                    for neighbor, owner, enemy_troops in enemy_neighbors[:4]
+                )
+                lines.append(f"- {territory}({troops}) -> {enemy_text}")
+        else:
+            lines.append("- none")
+
+        interior_reserves = self.get_interior_reserves(player_name)
+        lines.extend(["", "Your interior reserves:"])
+        if interior_reserves:
+            reserve_text = ", ".join(
+                f"{territory} can_move={movable_troops}"
+                for territory, movable_troops in interior_reserves[:6]
+            )
+            lines.append(f"- {reserve_text}")
+        else:
+            lines.append("- none")
+
+        if include_world_map:
+            lines.extend(["", self.format_world_map_compact()])
+
+        return "\n".join(lines)
     
     def format_strong_territories(self, 
         strong_territories_with_troops: List[Tuple[str, int]], player_name: str
@@ -339,7 +666,8 @@ class GameState:
         return formatted_strong_territories
     
     def format_adjacent_enemy_territories(
-        self, adjacent_enemy_territories: Dict[str, List]) -> str:
+        self, adjacent_enemy_territories: Dict[str, List], player_name: Optional[str] = None
+    ) -> str:
         """
         Format the adjacent enemy territories dictionary into a human-readable string.
         
@@ -351,19 +679,49 @@ class GameState:
         Returns:
         - A formatted string representing the adjacent enemy territories in a human-readable format.
         """
-        formatted_output = ("The following is list of territories you control " +
-            "and the adjacent enemy territories available to attack:\n\n")
+        aliases = self.get_player_aliases()
+        formatted_output = ["Attack options:"]
 
         for territory, (attacking_troops, enemy_territories) in adjacent_enemy_territories.items():
-            formatted_output += f"{territory}:\n"
-            formatted_output += f"  - Maximum Available Attacking Troops: {attacking_troops}\n"
             if enemy_territories:
-                formatted_output += f"  - Adjacent Enemy Territories: {', '.join(enemy_territories)}\n"
+                enemy_parts = []
+                for enemy_territory in enemy_territories:
+                    control = self.get_territory_control(enemy_territory)
+                    if control is None:
+                        enemy_parts.append(f"{enemy_territory} _:0")
+                        continue
+                    owner, troops = control
+                    owner_text = aliases.get(owner, owner) if player_name else owner
+                    enemy_parts.append(f"{enemy_territory} {owner_text}({troops})")
+                formatted_output.append(
+                    f"- {territory} max={attacking_troops} -> {', '.join(enemy_parts)}"
+                )
             else:
-                formatted_output += "  - No adjacent enemy territories.\n"
-            formatted_output += "\n"  # Add a blank line for readability
-        
-        return formatted_output
+                formatted_output.append(
+                    f"- {territory} max={attacking_troops} -> no enemy neighbors"
+                )
+
+        if len(formatted_output) == 1:
+            formatted_output.append("- no legal attacks")
+
+        return "\n".join(formatted_output)
+
+    def format_fortify_options(self, player_name: str) -> str:
+        fortify_options = self.get_fortify_options(player_name)
+        lines = ["Fortify options (legal connected border targets only):"]
+
+        for from_territory, legal_targets in fortify_options.items():
+            movable_troops = self.check_number_of_troops(player_name, from_territory) - 1
+            target_text = ", ".join(
+                f"{target}({target_troops}, enemy_neighbors={enemy_count})"
+                for target, target_troops, enemy_count in legal_targets[:5]
+            )
+            lines.append(f"- From {from_territory} max={movable_troops} -> {target_text}")
+
+        if len(lines) == 1:
+            lines.append("- no useful fortify moves")
+
+        return "\n".join(lines)
 
     def get_sum_of_player_troops(self, player_name: str) -> int:
         return self.territories_df[f'{player_name}'].sum()

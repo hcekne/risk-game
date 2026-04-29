@@ -1,5 +1,6 @@
 # Virtual environment
 venv/
+.venv/
 
 # Python cache files
 __pycache__/
@@ -11,6 +12,12 @@ __pycache__/
 # game files
 
 game_results/game__*
+game_results/llm_interactions/*
+!game_results/llm_interactions/.gitkeep
+!game_results/llm_interactions/README.md
+game_results/experiments/*
+!game_results/experiments/.gitkeep
+!game_results/experiments/README.md
 
 game_results/experiment0*
 

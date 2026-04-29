@@ -14,6 +14,13 @@ class Rules:
         self.required_continents = config.required_continents
         self.key_areas = config.key_areas
         self.max_rounds = config.max_rounds
+        self.turn_time_limit_seconds = config.turn_time_limit_seconds
+        self.placement_time_limit_seconds = config.placement_time_limit_seconds
+        self.placement_reasoning_effort = config.placement_reasoning_effort
+        self.planning_reasoning_effort = config.planning_reasoning_effort
+        self.attack_reasoning_effort = config.attack_reasoning_effort
+        self.fortify_reasoning_effort = config.fortify_reasoning_effort
+        self.card_trade_reasoning_effort = config.card_trade_reasoning_effort
         self.trade_count = 0
         
         # Set mode based on territory_control_percentage
@@ -305,5 +312,3 @@ class Rules:
                     (list(indices),  wild))
         
         return valid_combinations
-
-
