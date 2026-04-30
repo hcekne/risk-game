@@ -1,6 +1,7 @@
 import argparse
 import json
 
+from risk_game.paths import get_game_results_subdir
 from risk_game.utils.experiment_batch import (
     build_status_line,
     find_latest_experiment_folder,
@@ -18,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--base-folder",
-        default="game_results/experiments",
+        default=str(get_game_results_subdir("experiments")),
         help="Base directory searched when --experiment-folder is omitted.",
     )
     parser.add_argument(

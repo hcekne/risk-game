@@ -12,14 +12,24 @@ __pycache__/
 # game files
 
 game_results/game__*
+game_results/*.json
+game_results/analysis_*
 game_results/llm_interactions/*
 !game_results/llm_interactions/.gitkeep
 !game_results/llm_interactions/README.md
 game_results/experiments/*
 !game_results/experiments/.gitkeep
 !game_results/experiments/README.md
+game_results/model_probes/*
+game_results/prompt_smoke_runs/*
+game_results/league_logs/*
+game_results/rubric_calibration/*
 
 game_results/experiment0*
 
 
 data/qdrant/*
+data/rclone-config/*
+!data/rclone-config/.gitkeep
+data/rclone-cache/*
+!data/rclone-cache/.gitkeep

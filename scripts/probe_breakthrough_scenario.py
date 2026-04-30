@@ -10,6 +10,7 @@ from risk_game.game_master import GameMaster
 from risk_game.game_state import GameState
 from risk_game.llm_clients.llm_base import LLMClient
 from risk_game.llm_clients.llm_client import create_llm_client
+from risk_game.paths import get_game_results_subdir
 from risk_game.player_agent import PlayerAgent
 from risk_game.rules import Rules
 
@@ -337,7 +338,7 @@ def main() -> None:
 
     output_path = args.output
     if output_path is None:
-        output_dir = Path("game_results/model_probes/breakthrough_scenarios")
+        output_dir = get_game_results_subdir("model_probes", "breakthrough_scenarios")
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / (
             f"{args.model.replace('/', '_')}_{int(time.time())}.json"

@@ -6,9 +6,13 @@ from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 
+from risk_game.paths import get_game_results_dir
 
 
-def create_game_folder(base_folder="game_results"):
+
+def create_game_folder(base_folder: str | None = None):
+    if base_folder is None:
+        base_folder = str(get_game_results_dir())
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     game_name = "game__" + timestamp
     game_folder = os.path.join(base_folder, game_name)

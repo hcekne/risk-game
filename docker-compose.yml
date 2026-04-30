@@ -16,11 +16,15 @@ services:
       - .env
     volumes:
       - .:/app
+      - ${GAME_RESULTS_HOST_PATH}:/shared-game-results
       - ./custom_startup.sh:/usr/local/bin/custom_startup.sh
+      - ./data/rclone-config:/home/${USER_NAME}/.config/rclone
+      - ./data/rclone-cache:/home/${USER_NAME}/.cache/rclone
     environment:
       - USER_ID=${USER_ID}
       - GROUP_ID=${GROUP_ID}
       - USER_NAME=${USER_NAME}
+      - RISK_GAME_RESULTS_DIR=/shared-game-results
     depends_on:
       - qdrant
     entrypoint: ["/usr/local/bin/custom_startup.sh"]

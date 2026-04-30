@@ -8,6 +8,7 @@ from typing import Optional
 from risk_game.experiments import AgentSpec, Experiment
 from risk_game.game_config import GameConfig
 from risk_game.llm_clients.llm_client import create_llm_client
+from risk_game.paths import get_game_results_dir
 
 
 REASONING_ORDER = ["none", "low", "medium", "high", "xhigh"]
@@ -173,7 +174,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--base-folder",
-        default="game_results",
+        default=str(get_game_results_dir()),
         help="Directory where game folders and the final summary file will be written.",
     )
     parser.add_argument(

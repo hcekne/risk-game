@@ -22,3 +22,4 @@ Notes:
 - Runtime experiment files themselves are ignored by git.
 - Use `scripts/experiment_status.py` and `scripts/experiment_summary.py` instead of reading raw logs when possible.
 - Durable tracked write-ups belong under `docs/experiment-suites/...`, not in this folder.
+- For a short inventory of completed local experiments and the Dropbox sync plan for moving these folders between machines, see [docs/artifact-storage-and-dropbox-sync.md](/home/hcekne/repos/risk-game/docs/artifact-storage-and-dropbox-sync.md).

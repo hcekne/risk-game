@@ -10,6 +10,7 @@ from risk_game.utils.decorators import track_turn_time
 from risk_game.utils.game_admin import create_game_folder, save_game_state, \
 save_player_data, save_end_game_results, save_turn_summary, \
 build_llm_interaction_logger, save_game_manifest
+from risk_game.paths import get_game_results_dir
 from risk_game.utils.turn_summary import (
     build_player_model_info,
     build_turn_outcome,
@@ -1257,8 +1258,10 @@ class GameMaster:
         return completed_turn
     
     def play_game(self, include_initial_troop_placement:bool = True,
-                  base_folder: str = "game_results"
+                  base_folder: str | None = None
     ) -> str:
+        if base_folder is None:
+            base_folder = str(get_game_results_dir())
         
         turn_number = 0
         games_folder = create_game_folder(base_folder=base_folder)

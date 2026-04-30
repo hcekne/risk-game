@@ -6,10 +6,12 @@ IN_CONTAINER := $(shell [ -f /.dockerenv ] && echo 1 || echo 0)
 USER_ID := $(shell id -u)
 GROUP_ID := $(shell id -g)
 USER_NAME := $(shell whoami)
+GAME_RESULTS_HOST_PATH ?= $(HOME)/shared/risk-game/game_results
 
 export USER_ID
 export GROUP_ID
 export USER_NAME
+export GAME_RESULTS_HOST_PATH
 
 ARGS ?=
 
@@ -26,6 +28,7 @@ ifeq ($(IN_CONTAINER),1)
 	@echo "Already inside the container. Run 'make up' from the host."
 	@exit 1
 else
+	mkdir -p "$(GAME_RESULTS_HOST_PATH)"
 	$(COMPOSE) up --build -d
 endif
 

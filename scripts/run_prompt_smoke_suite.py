@@ -10,6 +10,7 @@ from risk_game.game_master import GameMaster
 from risk_game.game_state import GameState
 from risk_game.llm_clients.llm_client import create_llm_client
 from risk_game.llm_clients.llm_base import LLMClient
+from risk_game.paths import get_game_results_subdir
 from risk_game.player_agent import PlayerAgent
 from risk_game.rules import Rules
 from risk_game.utils.game_admin import (
@@ -36,7 +37,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--base-folder",
-        default="game_results/prompt_smoke_runs",
+        default=str(get_game_results_subdir("prompt_smoke_runs")),
         help="Base folder for the smoke run artifacts.",
     )
     parser.add_argument(

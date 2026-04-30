@@ -6,7 +6,9 @@ RUN apt-get update && \
 	nano \
 	git \
 	make \
-	sudo && \
+	sudo \
+	rclone \
+	ca-certificates && \
 	rm -rf /var/lib/apt/lists/*
 
 # Set the working directory

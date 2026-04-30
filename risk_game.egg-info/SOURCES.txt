@@ -8,6 +8,7 @@ risk_game/game_config.py
 risk_game/game_constants.py
 risk_game/game_master.py
 risk_game/game_state.py
+risk_game/paths.py
 risk_game/player_agent.py
 risk_game/rules.py
 risk_game.egg-info/PKG-INFO
@@ -24,6 +25,7 @@ risk_game/llm_clients/llm_base.py
 risk_game/llm_clients/llm_client.py
 risk_game/llm_clients/moonshot_client.py
 risk_game/llm_clients/openai_client.py
+risk_game/llm_clients/system_prompts.py
 risk_game/utils/__init__.py
 risk_game/utils/decorators.py
 risk_game/utils/experiment_batch.py
@@ -35,6 +37,7 @@ tests/helpers.py
 tests/test_adding.py
 tests/test_anthropic_client_config.py
 tests/test_anthropic_thinking.py
+tests/test_breakthrough_probe.py
 tests/test_experiment_batch.py
 tests/test_experiments.py
 tests/test_game_admin.py

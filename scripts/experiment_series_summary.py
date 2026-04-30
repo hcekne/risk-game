@@ -2,6 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
+from risk_game.paths import get_game_results_subdir
 from risk_game.utils.experiment_batch import (
     build_series_manifest,
     combine_experiment_results,
@@ -33,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--base-folder",
-        default="game_results/experiment_series",
+        default=str(get_game_results_subdir("experiment_series")),
         help="Base directory for combined series outputs.",
     )
     parser.add_argument(

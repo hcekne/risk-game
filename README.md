@@ -74,6 +74,7 @@ If you are using Claude, Gemini, Codex, or another coding agent, see [AGENTS.md]
 
 The `risk-game` container is a dev/runtime container and does not need a published app port. The only host-exposed service required by default is `qdrant` on `6333`.
 The container image now includes `make` and `sudo` as standard utilities.
+The container image now also includes `rclone`, and its config/cache directories are bind-mounted into `data/rclone-config` and `data/rclone-cache` so Dropbox sync setup survives rebuilds.
 
 ## Running the Game
 To run the game, execute the following command inside the container:
@@ -130,6 +131,36 @@ See [docs/development-log.md](docs/development-log.md) for the running record of
 See [docs/experiment-program.md](docs/experiment-program.md) for the current planned experiment series, hypotheses, seat-rotation policy, and sample sizes.
 See [docs/experiment-suites/README.md](docs/experiment-suites/README.md) for the tracked experiment-suite archive, including completed analyses and how to add future scored runs.
 See [docs/experiment-suites/2026-q2-strategic-tests/README.md](docs/experiment-suites/2026-q2-strategic-tests/README.md) for the current 2026 Q2 strategic-test suite.
+See [docs/artifact-storage-and-dropbox-sync.md](docs/artifact-storage-and-dropbox-sync.md) for a short inventory of completed experiments, the local folder structure on the current machine, and the recommended Dropbox sync plan for resuming from another machine.
+For Dropbox OAuth inside Docker, use [scripts/rclone_config_host_network.sh](scripts/rclone_config_host_network.sh) from the host rather than running `rclone config` from a normal `docker exec` shell.
+
+## Shared Artifacts
+Runtime experiment output is now designed to live outside the git checkout.
+
+Default host-side shared path:
+```bash
+$HOME/shared/risk-game/game_results
+```
+
+The container mounts that host path at:
+```bash
+/shared-game-results
+```
+
+and all runtime writers now resolve `RISK_GAME_RESULTS_DIR=/shared-game-results`.
+
+This means:
+- git repos can be cloned on multiple machines without duplicating large artifact trees
+- multiple checkouts can point at the same shared `game_results` store
+- Dropbox sync can operate on the shared store directly instead of per-repo copies
+
+Useful helpers:
+```bash
+bash scripts/bootstrap_shared_game_results.sh
+bash scripts/rclone_pull_shared_game_results.sh
+bash scripts/rclone_push_shared_game_results.sh
+bash scripts/rclone_bisync_shared_game_results.sh --resync
+```
 
 ## Running Tests
 To run the tests inside the container, use the following command:

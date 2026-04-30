@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from openai import OpenAI
 
+from risk_game.paths import get_game_results_subdir
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -169,7 +170,7 @@ def main() -> None:
 
     output_path = args.output
     if output_path is None:
-        probe_dir = Path("game_results") / "model_probes"
+        probe_dir = get_game_results_subdir("model_probes")
         probe_dir.mkdir(parents=True, exist_ok=True)
         output_path = probe_dir / f"openai_probe_{args.model}_{int(time.time())}.json"
     output_path = Path(output_path)

@@ -11,6 +11,8 @@ Scope:
 
 This suite complements [docs/experiment-program.md](../experiment-program.md), which defines the broader planned program. The suite folder records what has actually been run and what the results mean.
 
+For a machine-level inventory of completed experiments and generated outputs, plus the Dropbox handoff plan for moving those artifacts between machines, see [docs/artifact-storage-and-dropbox-sync.md](../artifact-storage-and-dropbox-sync.md).
+
 ## Common Protocol
 
 Unless an experiment note says otherwise, use these defaults:
@@ -48,6 +50,7 @@ Those folders are intentionally git-ignored. The tracked analysis note should al
 | --- | --- | --- | --- | --- |
 | Complete | OpenAI Mini Reasoning 2 | In a constrained synchronous live-turn environment, does `gpt-5.4-mini` perform differently at `none/low/medium/high` reasoning levels? | `game_results/experiments/experiment__2026-04-27_22-29-27__mini_reasoning_2` | [2026-04-27_openai-mini-reasoning.md](2026-04-27_openai-mini-reasoning.md) |
 | Complete | OpenAI Mini High-vs-Medium Recovery | If `high` is given more time, does it recover against `medium`? | `game_results/experiments/experiment__2026-04-28_14-57-43__mini_medium_vs_high_300s_16` | [2026-04-29_openai-mini-high-vs-medium-recovery.md](2026-04-29_openai-mini-high-vs-medium-recovery.md) |
+| Complete | Cross-Provider Frontier Smoke 1 | Does the locked cross-provider frontier roster complete a clean live-turn smoke game under shared timers and prompts? | `game_results/experiments/experiment__2026-04-29_20-44-02__frontier_championship_smoke_1` | local artifact only; detailed suite note pending |
 | Planned | OpenAI Mini High-Strategic Hybrid | Does `high` help when reserved for planning/attack only, while faster settings handle administrative phases? | pending | [2026-04-29_openai-mini-high-strategic-hybrid-plan.md](2026-04-29_openai-mini-high-strategic-hybrid-plan.md) |
 | Planned | OpenAI Generation Ladder | `gpt-5.5` vs `gpt-5.4` vs `gpt-4.1` | pending | pending |
 | Planned | OpenAI Size Ladder | `gpt-5.4` vs `gpt-5.4-mini` vs `gpt-5.4-nano` | pending | pending |

@@ -16,6 +16,7 @@ from risk_game.experiments import (
     build_openai_size_ladder,
 )
 from risk_game.game_config import GameConfig
+from risk_game.paths import get_game_results_subdir
 from risk_game.utils.experiment_batch import (
     build_experiment_manifest,
     build_experiment_status,
@@ -65,7 +66,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-games", type=int, default=1, help="Number of games.")
     parser.add_argument(
         "--base-folder",
-        default="game_results/experiments",
+        default=str(get_game_results_subdir("experiments")),
         help="Base directory for experiment folders.",
     )
     parser.add_argument(

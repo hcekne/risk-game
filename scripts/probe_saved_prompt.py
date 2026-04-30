@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from risk_game.llm_clients.llm_base import LLMClient
 from risk_game.llm_clients.llm_client import create_llm_client
+from risk_game.paths import get_game_results_subdir
 from risk_game.llm_clients.openai_client import OpenAIClient
 from risk_game.player_agent import PlayerAgent
 
@@ -236,7 +237,7 @@ def main() -> None:
 
     output_path = args.output
     if output_path is None:
-        probe_dir = Path("game_results") / "model_probes"
+        probe_dir = get_game_results_subdir("model_probes")
         probe_dir.mkdir(parents=True, exist_ok=True)
         output_path = probe_dir / (
             f"{Path(args.prompt_json).stem}_{int(time.time())}.json"

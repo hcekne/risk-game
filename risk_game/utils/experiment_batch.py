@@ -8,6 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from risk_game.experiments import AgentSpec
 from risk_game.game_config import GameConfig
 from risk_game.llm_clients.llm_client import create_llm_client
+from risk_game.paths import get_game_results_subdir
 from risk_game.utils.strategic_rubric import score_turn_summary
 
 
@@ -46,8 +47,10 @@ def load_json(path: Path) -> Dict[str, Any]:
 def create_experiment_folder(
     *,
     label: str,
-    base_folder: str = "game_results/experiments",
+    base_folder: str | None = None,
 ) -> Path:
+    if base_folder is None:
+        base_folder = str(get_game_results_subdir("experiments"))
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     safe_label = sanitize_path_component(label)
     folder = Path(base_folder) / f"experiment__{timestamp}__{safe_label}"
@@ -416,7 +419,9 @@ def render_experiment_summary_markdown(
     return "\n".join(lines).strip() + "\n"
 
 
-def find_latest_experiment_folder(base_folder: str = "game_results/experiments") -> Path:
+def find_latest_experiment_folder(base_folder: str | None = None) -> Path:
+    if base_folder is None:
+        base_folder = str(get_game_results_subdir("experiments"))
     base_path = Path(base_folder)
     candidates = sorted(
         [path for path in base_path.glob("experiment__*") if path.is_dir()],
@@ -488,7 +493,7 @@ def build_series_manifest(
         "label": label,
         "preset_name": reference_manifest.get("preset_name"),
         "generated_at_utc": utc_timestamp(),
-        "base_folder": "game_results/experiment_series",
+        "base_folder": str(get_game_results_subdir("experiment_series")),
         "num_games": total_planned_games,
         "seat_rotation_enabled": reference_seat_rotation,
         "config": reference_config,
