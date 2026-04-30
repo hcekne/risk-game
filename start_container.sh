@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  echo "Run this script as 'bash start_container.sh', not '. start_container.sh'."
+  return 1
+fi
+
 set -euo pipefail
 
 # Retrieve the user ID, group ID, and username
@@ -22,9 +27,19 @@ export GAME_RESULTS_HOST_PATH
 
 mkdir -p "$GAME_RESULTS_HOST_PATH"
 
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker-compose)
+else
+  echo "Neither 'docker compose' nor 'docker-compose' is installed."
+  echo "Install Docker with the Compose plugin, or install docker-compose."
+  exit 127
+fi
+
 # Run Docker Compose with the appropriate user and group ID
-docker-compose up --build -d
+"${COMPOSE_CMD[@]}" up --build -d
 
 echo "Containers started in detached mode."
 echo "Enter the app container with: docker exec -it risk-game-container bash"
-echo "Run tests with: docker-compose exec -T risk-game pytest tests/"
+echo "Run tests with: ${COMPOSE_CMD[*]} exec -T risk-game pytest tests/"

@@ -1,4 +1,4 @@
-COMPOSE ?= docker-compose
+COMPOSE ?= $(shell if docker compose version >/dev/null 2>&1; then printf '%s' 'docker compose'; elif command -v docker-compose >/dev/null 2>&1; then printf '%s' 'docker-compose'; else printf '%s' 'docker-compose'; fi)
 SERVICE ?= risk-game
 CONTAINER_NAME ?= risk-game-container
 IN_CONTAINER := $(shell [ -f /.dockerenv ] && echo 1 || echo 0)

@@ -173,6 +173,13 @@ Or from the host through Docker:
 make test
 ```
 
+Start the stack from the host with:
+```bash
+bash start_container.sh
+```
+
+Do not source it with `. start_container.sh`; run it as a normal script.
+
 `make test` runs the deterministic regression suite in-container. Live provider/API checks are separate:
 ```bash
 make test-live
