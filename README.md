@@ -162,6 +162,12 @@ bash scripts/rclone_push_shared_game_results.sh
 bash scripts/rclone_bisync_shared_game_results.sh --resync
 ```
 
+For machine-to-machine migration, prefer the bundle workflow over raw Dropbox tree sync:
+```bash
+bash scripts/upload_game_results_bundle.sh
+bash scripts/restore_game_results_bundle.sh dropbox:risk-game-shared/bundles latest_game_results.tar.gz --force
+```
+
 ## Running Tests
 To run the tests inside the container, use the following command:
 ```bash
