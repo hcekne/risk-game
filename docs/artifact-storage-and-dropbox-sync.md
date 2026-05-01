@@ -1,59 +1,86 @@
 # Artifact Storage And Dropbox Sync
 
 ## Purpose
-This note records:
-- which experiments and probes have already been run
-- where their artifacts live on the current machine
-- a practical plan for syncing those artifacts to a shared Dropbox folder so work can continue from another machine or remote server
+This note defines the canonical cross-machine workflow for this repo:
+- Git for code, docs, configs, and tracked analyses
+- Dropbox bundle snapshots for runtime `game_results`
 
+It also records:
+- where runtime artifacts live on the current machine
+- which experiments and probes already exist
+- how to resume work on another laptop or remote server
+
+## Canonical Storage Model
+
+### Git-Tracked Repo
 Current repo root on this machine:
+
 ```text
 /home/hcekne/repos/risk-game
 ```
 
-Current shared runtime artifact root on this machine:
+Git should contain:
+- source code
+- configs
+- prompt and system-prompt definitions
+- tracked experiment write-ups under `docs/experiment-suites/...`
+- helper scripts
+
+Git should not contain:
+- raw experiment outputs
+- prompt/response logs
+- generated summaries from live runs
+
+### Shared Runtime Artifact Store
+Current host-side shared runtime artifact root:
+
 ```text
 /home/hcekne/shared/risk-game/game_results
 ```
 
-## Local Artifact Layout
-The repo is now split into two persistence layers:
+Inside the container, that path is mounted at:
 
-1. Git-tracked code, configs, docs, and analysis notes
-```text
-/home/hcekne/repos/risk-game
-```
-
-2. Shared generated runtime artifacts
-```text
-/home/hcekne/shared/risk-game/game_results
-```
-
-Inside the container, the shared host path is mounted at:
 ```text
 /shared-game-results
 ```
 
-and runtime writers resolve:
+and the standard stack sets:
+
 ```text
 RISK_GAME_RESULTS_DIR=/shared-game-results
 ```
 
+Important consequence:
+- when the stack is started normally, runtime artifacts are written to the shared store, not the repo-local `game_results/` tree
+- the repo-local `game_results/` directory is now mainly tracked scaffolding plus documentation
+
+## Why Bundle Restore Is The Default
+For cross-machine handoff, use a compressed bundle, not raw Dropbox tree sync.
+
+Why:
+- `game_results` contains thousands of small files
+- Dropbox API sync on many tiny files is much slower than a single archive
+- machine-to-machine restore is dramatically faster and simpler with a tarball
+
+Use raw `rclone sync` or `bisync` only if you intentionally want a long-lived mirrored artifact tree. Do not treat that as the default migration path.
+
+## Current Local Artifact Layout
 Important subfolders under the shared `game_results/` root:
 - `experiments/`
-  Scored experiment batches and their per-batch manifests, summaries, and linked game folders.
+  Scored experiment batches and their manifests, summaries, and linked game folders
 - `model_probes/`
-  One-off and repeated probe outputs, including prompt-architecture probes and provider latency/behavior probes.
+  One-off and repeated probe outputs, including prompt-architecture probes
 - `prompt_smoke_runs/`
-  Prompt-smoke qualification runs used to verify model viability before full experiments.
+  Prompt-smoke qualification runs used before full experiments
 - `league_logs/`
-  Long-running live experiment logs.
+  Long-running live experiment logs
 - `rubric_calibration/`
-  Strategic-rubric calibration outputs.
+  Strategic-rubric calibration outputs
 - `analysis_*`
-  Post-hoc analysis folders such as plots and derived metrics.
+  Post-hoc analysis folders and derived metrics
 
-Tracked long-form analysis notes live in:
+Tracked long-form analysis notes live under:
+
 ```text
 /home/hcekne/repos/risk-game/docs/experiment-suites
 ```
@@ -64,39 +91,39 @@ Tracked long-form analysis notes live in:
 
 1. OpenAI Mini Reasoning 1
 - Type: interrupted diagnostic batch
-- Local artifacts:
-  - `/home/hcekne/repos/risk-game/game_results/experiments/experiment__2026-04-27_22-05-54__mini_reasoning_1`
+- Raw artifacts:
+  - `/home/hcekne/shared/risk-game/game_results/experiments/experiment__2026-04-27_22-05-54__mini_reasoning_1`
 - Notes:
-  - useful mainly as an early failure/timing reference
+  - useful mainly as an early timing and failure reference
   - not the main result to cite
 
 2. OpenAI Mini Reasoning 2
 - Type: completed scored batch
-- Local artifacts:
-  - `/home/hcekne/repos/risk-game/game_results/experiments/experiment__2026-04-27_22-29-27__mini_reasoning_2`
+- Raw artifacts:
+  - `/home/hcekne/shared/risk-game/game_results/experiments/experiment__2026-04-27_22-29-27__mini_reasoning_2`
 - Tracked analysis:
   - [2026-04-27_openai-mini-reasoning.md](experiment-suites/2026-q2-strategic-tests/2026-04-27_openai-mini-reasoning.md)
 
 3. OpenAI Mini High-vs-Medium Recovery
 - Type: completed scored batch
-- Local artifacts:
-  - `/home/hcekne/repos/risk-game/game_results/experiments/experiment__2026-04-28_14-57-43__mini_medium_vs_high_300s_16`
+- Raw artifacts:
+  - `/home/hcekne/shared/risk-game/game_results/experiments/experiment__2026-04-28_14-57-43__mini_medium_vs_high_300s_16`
 - Tracked analysis:
   - [2026-04-29_openai-mini-high-vs-medium-recovery.md](experiment-suites/2026-q2-strategic-tests/2026-04-29_openai-mini-high-vs-medium-recovery.md)
 
 4. Cross-Provider Frontier Smoke 1
 - Type: completed one-game smoke batch
-- Local artifacts:
-  - `/home/hcekne/repos/risk-game/game_results/experiments/experiment__2026-04-29_20-44-02__frontier_championship_smoke_1`
+- Raw artifacts:
+  - `/home/hcekne/shared/risk-game/game_results/experiments/experiment__2026-04-29_20-44-02__frontier_championship_smoke_1`
 - Notes:
-  - this is a smoke/pilot result, not a full championship
-  - it is useful for checking viability, turn timing, and provider behavior before the staged 16-game championship
+  - this is a smoke or pilot result, not a full championship
+  - useful for checking viability, turn timing, and provider behavior before the staged cross-provider batch
 
-### Model / Prompt Probes
+### Model And Prompt Probes
 
 1. Breakthrough scenario probes
-- Local folder:
-  - `/home/hcekne/repos/risk-game/game_results/model_probes/breakthrough_scenarios`
+- Raw folder:
+  - `/home/hcekne/shared/risk-game/game_results/model_probes/breakthrough_scenarios`
 - Important files already created:
   - `gpt-5.4-mini_1777467541.json`
   - `gpt-5.4-mini_1777467879.json`
@@ -108,8 +135,8 @@ Tracked long-form analysis notes live in:
   - compare prompt architectures such as `minimal_baseline`, `system_prompt_only`, `system_plus_execution_handoff`, and `full_live`
 
 2. Provider and model viability probes
-- Local folder:
-  - `/home/hcekne/repos/risk-game/game_results/model_probes`
+- Raw folder:
+  - `/home/hcekne/shared/risk-game/game_results/model_probes`
 - Examples:
   - `gpt41_initial_probe_2026-04-27.json`
   - `gpt55pro_initial_probe_2026-04-27.json`
@@ -119,288 +146,161 @@ Tracked long-form analysis notes live in:
   - `anthropic_thinking_viability/.../anthropic_opus_47_thinking_probe.json`
 
 3. Prompt-smoke qualification runs
-- Local folder:
-  - `/home/hcekne/repos/risk-game/game_results/prompt_smoke_runs`
-
-### Other Useful Local Artifacts
-- League logs:
-  - `/home/hcekne/repos/risk-game/game_results/league_logs`
-- Rubric calibration:
-  - `/home/hcekne/repos/risk-game/game_results/rubric_calibration`
-- Earlier standalone analysis:
-  - `/home/hcekne/repos/risk-game/game_results/analysis_nano_medium_full_initial_2026-04-22`
-
-## What Should Be Synced To Dropbox
-
-Recommended to sync:
-- `game_results/experiments/`
-- `game_results/model_probes/`
-- `game_results/prompt_smoke_runs/`
-- `game_results/league_logs/`
-- `game_results/rubric_calibration/`
-- `game_results/analysis_*`
-
-Optional to sync:
-- `game_results/llm_interactions/`
-  Only if you explicitly want the raw full prompt/response logs available on other machines. These can be large.
-
-Do **not** sync:
-- `.env`
-- `.venv/`
-- Docker images / local Docker volumes
-- `data/qdrant/`
-- any provider secrets
+- Raw folder:
+  - `/home/hcekne/shared/risk-game/game_results/prompt_smoke_runs`
 
 ## Recommended Dropbox Layout
+Use a shared Dropbox folder like:
 
-Use a shared Dropbox folder named something like:
-```text
-risk-game-shared
-```
-
-Recommended structure inside Dropbox:
 ```text
 risk-game-shared/
-  game_results/
-    experiments/
-    experiment_series/
-    model_probes/
-    prompt_smoke_runs/
-    league_logs/
-    rubric_calibration/
-    analysis/
-  notes/
-    machine_state/
+  bundles/
+    latest_game_results.tar.gz
+    latest_game_results.manifest.txt
+    risk-game_game-results_<timestamp>.tar.gz
+    risk-game_game-results_<timestamp>.manifest.txt
 ```
 
-This keeps generated artifacts separate from the git repo itself. The code and docs should continue to move through Git; the large generated outputs should move through Dropbox.
+Optional long-lived raw mirror:
 
-## Recommended Sync Method
+```text
+risk-game-shared/game_results/
+```
 
-For a headless server or remote machine, the cleanest option is `rclone` with Dropbox.
+That raw mirror is optional. The bundle snapshot path above is the canonical migration path.
 
-Why `rclone`:
-- works well on servers
-- works without a desktop Dropbox client
-- easy to script
-- easy to use from multiple machines
+## One-Time rclone Setup Per Machine
 
-## Dropbox Sync Plan
+### 1. Start The Stack
+From the repo root:
 
-## Shared Runtime Layout
-
-The preferred architecture is now:
-- git-tracked repo contents under `/home/hcekne/repos/risk-game`
-- runtime artifacts under `/home/hcekne/shared/risk-game/game_results`
-
-This avoids duplicating large experiment trees across multiple checkouts.
-
-On a new machine:
-1. clone the repo anywhere you want
-2. set `GAME_RESULTS_HOST_PATH` if you do not want the default
-3. start the container
-4. pull or bisync the shared artifact tree
-
-## Container-First `rclone` Setup
-
-The repo now supports running `rclone` directly inside the `risk-game` container.
-
-Container-persistent paths:
-- rclone config:
-  - `/home/<user>/.config/rclone`
-- rclone cache:
-  - `/home/<user>/.cache/rclone`
-
-These are bind-mounted to project-local folders on the host:
-- `/home/hcekne/repos/risk-game/data/rclone-config`
-- `/home/hcekne/repos/risk-game/data/rclone-cache`
-
-That means:
-- your `rclone` configuration survives container restarts and rebuilds
-- your Dropbox remote only needs to be configured once per machine
-
-### Rebuild The Container After This Change
-From the host:
 ```bash
-docker-compose up --build -d
+bash start_container.sh
 ```
 
-Then enter the container:
-```bash
-docker exec -it risk-game-container bash
-```
+### 2. Configure Dropbox OAuth
+Use the helper from the host:
 
-Verify `rclone` is available:
-```bash
-rclone version
-```
-
-The host-side shared artifact path defaults to:
-```bash
-$HOME/shared/risk-game/game_results
-```
-
-You can override it before starting the stack:
-```bash
-export GAME_RESULTS_HOST_PATH=/some/other/path/game_results
-```
-
-### 1. Set Up `rclone` Once Per Machine
-Do **not** do Dropbox auto-config from a normal `docker exec` shell inside the long-running app container. If you choose auto config there, the callback URL points at the container's own `127.0.0.1`, which your host browser cannot reach.
-
-Instead, use the helper below from the host. It launches the same image with `--network host` and writes the config into the persistent mounted folders:
 ```bash
 bash scripts/rclone_config_host_network.sh
 ```
 
-If you are already inside `rclone config` in the app container and chose auto config, abort it and rerun the helper above.
+For a local machine with a browser, normal auto-config is fine.
 
-Create a Dropbox remote, for example:
-```text
-dropbox
+For a remote server, use one of these:
+- SSH tunnel, then answer `y` to auto-config
+- headless/manual flow, then answer `n`
+
+Recommended server tunnel:
+
+```bash
+ssh -L 53682:127.0.0.1:53682 <user>@<server>
 ```
 
-Inside the container, that configuration will be written under:
-```text
-/home/<user>/.config/rclone/rclone.conf
+Then, on the server in that tunneled session:
+
+```bash
+cd ~/repos/risk-game
+bash scripts/rclone_config_host_network.sh
 ```
 
-Because of the bind mount, the real host-side file will live under:
+When using a custom Dropbox app, make sure its redirect URI includes:
+
 ```text
-/home/hcekne/repos/risk-game/data/rclone-config/
+http://localhost:53682/
 ```
 
-### 2. Create The Shared Folder
-After the helper finishes, use the normal app container again:
+### 3. Verify The Remote
+Inside the app container:
+
 ```bash
 docker exec -it risk-game-container bash
+rclone lsd dropbox:
 ```
 
-Create the destination once:
+Expected shape:
+
+```text
+          -1 ... risk-game-shared
+```
+
+## Canonical Machine-To-Machine Workflow
+
+### Source Machine: Create And Upload A Fresh Bundle
+From the repo root:
+
 ```bash
-rclone mkdir dropbox:risk-game-shared
+bash scripts/upload_game_results_bundle.sh
 ```
 
-### 3. Upload Current Local Artifacts
-For the shared-layout workflow, prefer these host-side helpers:
+Optional labeled snapshot:
 
-Bootstrap the shared host folder from the current repo-local artifact tree:
+```bash
+bash scripts/upload_game_results_bundle.sh frontier_stage1
+```
+
+What this does:
+- archives `/shared-game-results`
+- uploads a timestamped tarball and manifest
+- refreshes:
+  - `dropbox:risk-game-shared/bundles/latest_game_results.tar.gz`
+  - `dropbox:risk-game-shared/bundles/latest_game_results.manifest.txt`
+
+### Target Machine: Restore The Latest Bundle
+From the repo root:
+
+```bash
+bash scripts/restore_game_results_bundle.sh dropbox:risk-game-shared/bundles latest_game_results.tar.gz --force
+```
+
+What `--force` does:
+- clears the target machine's existing `/shared-game-results`
+- restores the snapshot into that location
+
+Do not manually clear the source machine's shared store before bundling. The source shared store is the artifact source of truth.
+
+### Verify The Restore
+Inside the container:
+
+```bash
+echo "$RISK_GAME_RESULTS_DIR"
+ls -la /shared-game-results/experiments | head -20
+ls -la /shared-game-results/model_probes | head -20
+```
+
+Then run one known summary:
+
+```bash
+docker exec -it risk-game-container bash -lc 'cd /app && python scripts/experiment_summary.py --experiment-folder /shared-game-results/experiments/experiment__2026-04-29_20-44-02__frontier_championship_smoke_1'
+```
+
+If that prints the expected summary, the restore worked.
+
+## Optional Raw Mirror Workflow
+These helpers still exist:
+
 ```bash
 bash scripts/bootstrap_shared_game_results.sh
-```
-
-Push local shared artifacts to Dropbox:
-```bash
+bash scripts/rclone_pull_shared_game_results.sh
 bash scripts/rclone_push_shared_game_results.sh
-```
-
-Pull shared artifacts down from Dropbox:
-```bash
-bash scripts/rclone_pull_shared_game_results.sh
-```
-
-Bidirectional sync:
-```bash
 bash scripts/rclone_bisync_shared_game_results.sh --resync
 ```
 
-After the first `--resync`, use:
-```bash
-bash scripts/rclone_bisync_shared_game_results.sh
-```
-
-From inside the container, you can still run raw `rclone` commands or the older selective helper script.
-
-Helper script:
-```bash
-bash scripts/sync_artifacts_to_rclone.sh
-```
-
-Optional custom remote path:
-```bash
-bash scripts/sync_artifacts_to_rclone.sh dropbox:risk-game-shared/game_results
-```
-
-Equivalent raw `rclone` commands:
+Use them only if you intentionally want a live Dropbox mirror of the raw tree. For migration and resumption, prefer the bundle scripts instead:
 
 ```bash
-rclone copy /home/hcekne/repos/risk-game/game_results/experiments dropbox:risk-game-shared/game_results/experiments --progress
-rclone copy /home/hcekne/repos/risk-game/game_results/model_probes dropbox:risk-game-shared/game_results/model_probes --progress
-rclone copy /home/hcekne/repos/risk-game/game_results/prompt_smoke_runs dropbox:risk-game-shared/game_results/prompt_smoke_runs --progress
-rclone copy /home/hcekne/repos/risk-game/game_results/league_logs dropbox:risk-game-shared/game_results/league_logs --progress
-rclone copy /home/hcekne/repos/risk-game/game_results/rubric_calibration dropbox:risk-game-shared/game_results/rubric_calibration --progress
+bash scripts/create_game_results_bundle.sh
+bash scripts/upload_game_results_bundle.sh
+bash scripts/download_game_results_bundle.sh
+bash scripts/restore_game_results_bundle.sh
 ```
 
-If you want the additional analysis folder too:
-```bash
-rclone copy /home/hcekne/repos/risk-game/game_results/analysis_nano_medium_full_initial_2026-04-22 dropbox:risk-game-shared/game_results/analysis/analysis_nano_medium_full_initial_2026-04-22 --progress
-```
+## Resume Checklist On Another Machine
+1. `git clone` or `git pull`
+2. `bash start_container.sh`
+3. `bash scripts/rclone_config_host_network.sh`
+4. `bash scripts/restore_game_results_bundle.sh dropbox:risk-game-shared/bundles latest_game_results.tar.gz --force`
+5. verify one known experiment summary
+6. continue running probes or experiments
 
-Use `copy`, not `sync`, unless you explicitly want Dropbox to exactly mirror the local machine and delete remote files that are missing locally.
-
-### 4. Rehydrate On Another Machine
-On the new machine:
-
-1. Clone the repo:
-```bash
-git clone git@github.com:hcekne/risk-game.git
-cd risk-game
-```
-
-2. Start the container:
-```bash
-./start_container.sh
-```
-
-3. Pull the shared artifacts back into the shared host path:
-Preferred:
-```bash
-bash scripts/rclone_pull_shared_game_results.sh
-```
-
-or bidirectional:
-```bash
-bash scripts/rclone_bisync_shared_game_results.sh --resync
-```
-
-Inside the rebuilt container, you can still use the older selective restore script if needed:
-```bash
-bash scripts/restore_artifacts_from_rclone.sh
-```
-
-Equivalent raw commands:
-```bash
-rclone copy dropbox:risk-game-shared/game_results/experiments /home/YOUR_USER/repos/risk-game/game_results/experiments --progress
-rclone copy dropbox:risk-game-shared/game_results/model_probes /home/YOUR_USER/repos/risk-game/game_results/model_probes --progress
-rclone copy dropbox:risk-game-shared/game_results/prompt_smoke_runs /home/YOUR_USER/repos/risk-game/game_results/prompt_smoke_runs --progress
-rclone copy dropbox:risk-game-shared/game_results/league_logs /home/YOUR_USER/repos/risk-game/game_results/league_logs --progress
-rclone copy dropbox:risk-game-shared/game_results/rubric_calibration /home/YOUR_USER/repos/risk-game/game_results/rubric_calibration --progress
-```
-
-4. Recreate `.env` locally on that machine.
-
-### 5. Resume Checklist
-On the new machine, before resuming work:
-- confirm the git checkout is on the expected branch/commit
-- confirm the shared host artifact path contains the already-run batches
-- confirm `experiments/` contains the already-run batches
-- confirm `model_probes/` contains the latest probe outputs
-- inspect the latest batch summary with:
-```bash
-make experiment-summary
-```
-- inspect the suite docs under:
-```text
-docs/experiment-suites/2026-q2-strategic-tests/
-```
-
-## Recommended Ongoing Practice
-
-After each major run:
-1. push code/docs to Git
-2. `bash scripts/rclone_bisync_shared_game_results.sh`
-3. do not rely on Git alone for generated outputs
-
-This gives the cleanest split:
-- Git for code, configs, docs, tracked analysis
-- Dropbox for heavy generated experiment outputs
+That is the canonical handoff workflow for this repo.

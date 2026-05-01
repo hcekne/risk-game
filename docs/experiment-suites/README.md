@@ -15,7 +15,7 @@ Do not use this layer for:
 - per-turn CSVs
 - generated JSON summaries
 
-Those runtime artifacts belong under `game_results/experiments/...` and remain git-ignored by default.
+Those runtime artifacts belong under the runtime `game_results/experiments/...` root, usually `/shared-game-results/experiments/...`, and remain git-ignored by default.
 
 ## Recommended Structure
 
@@ -46,7 +46,7 @@ Each tracked experiment analysis should include:
 ## Recommended Workflow
 
 1. Run the batch with `scripts/run_experiment.py`.
-2. Keep the raw local artifacts under `game_results/experiments/experiment__...`.
+2. Keep the raw local artifacts under the runtime `game_results` root, usually `/shared-game-results/experiments/experiment__...` inside the container.
 3. Analyze the finished batch from `experiment_manifest.json`, `experiment_results.json`, `experiment_summary.json`, and any targeted `llm_interactions/...` logs.
 4. Write the durable experiment note in the relevant suite folder under `docs/experiment-suites/...`.
 5. Add the experiment to the suite registry in that suite's `README.md`.
@@ -54,5 +54,5 @@ Each tracked experiment analysis should include:
 ## Contribution Rule
 
 If a new scored experiment is important enough to cite in the article or use for model comparisons, it should have:
-- a complete raw artifact folder under `game_results/experiments/...`
+- a complete raw artifact folder under the runtime `game_results/experiments/...` root
 - a tracked Markdown analysis under `docs/experiment-suites/...`

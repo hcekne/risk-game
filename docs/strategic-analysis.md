@@ -102,8 +102,8 @@ Because of that, the rubric should be used together with:
 Generate a live or scripted game as usual, then analyze a saved game folder:
 
 ```bash
-docker-compose exec -T risk-game python /app/scripts/analyze_turn_summaries.py \
-  --game-folder /app/game_results/game__YYYY-MM-DD_HH-MM-SS
+docker compose exec -T risk-game python /app/scripts/analyze_turn_summaries.py \
+  --game-folder /shared-game-results/game__YYYY-MM-DD_HH-MM-SS
 ```
 
 Outputs:

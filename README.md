@@ -47,7 +47,7 @@ The AI players play against each other using the API of the respective LLMs.
 
 3. **Create the dev container to run the code:**
    ```bash
-   ./start_container.sh
+   bash start_container.sh
    ```
 4. **Enter into the container:**
    ```bash
@@ -131,10 +131,10 @@ See [docs/development-log.md](docs/development-log.md) for the running record of
 See [docs/experiment-program.md](docs/experiment-program.md) for the current planned experiment series, hypotheses, seat-rotation policy, and sample sizes.
 See [docs/experiment-suites/README.md](docs/experiment-suites/README.md) for the tracked experiment-suite archive, including completed analyses and how to add future scored runs.
 See [docs/experiment-suites/2026-q2-strategic-tests/README.md](docs/experiment-suites/2026-q2-strategic-tests/README.md) for the current 2026 Q2 strategic-test suite.
-See [docs/artifact-storage-and-dropbox-sync.md](docs/artifact-storage-and-dropbox-sync.md) for a short inventory of completed experiments, the local folder structure on the current machine, and the recommended Dropbox sync plan for resuming from another machine.
+See [docs/artifact-storage-and-dropbox-sync.md](docs/artifact-storage-and-dropbox-sync.md) for the current artifact inventory, the shared-path layout, and the canonical Dropbox handoff workflow.
 For Dropbox OAuth inside Docker, use [scripts/rclone_config_host_network.sh](scripts/rclone_config_host_network.sh) from the host rather than running `rclone config` from a normal `docker exec` shell.
 
-## Shared Artifacts
+## Shared Artifacts And Machine Handoff
 Runtime experiment output is now designed to live outside the git checkout.
 
 Default host-side shared path:
@@ -154,18 +154,27 @@ This means:
 - multiple checkouts can point at the same shared `game_results` store
 - Dropbox sync can operate on the shared store directly instead of per-repo copies
 
-Useful helpers:
+Canonical split:
+- Git carries code, configs, docs, and tracked experiment write-ups.
+- Dropbox carries bundle snapshots of runtime `game_results`.
+
+Preferred machine-to-machine handoff:
+```bash
+# source machine
+bash scripts/upload_game_results_bundle.sh
+
+# target machine, after the container is up and rclone is configured
+bash scripts/restore_game_results_bundle.sh dropbox:risk-game-shared/bundles latest_game_results.tar.gz --force
+```
+
+Use the bundle workflow for migration and resume. Raw Dropbox tree sync is much slower here because `game_results` contains thousands of small files.
+
+Optional helpers for a long-lived shared-store mirror:
 ```bash
 bash scripts/bootstrap_shared_game_results.sh
 bash scripts/rclone_pull_shared_game_results.sh
 bash scripts/rclone_push_shared_game_results.sh
 bash scripts/rclone_bisync_shared_game_results.sh --resync
-```
-
-For machine-to-machine migration, prefer the bundle workflow over raw Dropbox tree sync:
-```bash
-bash scripts/upload_game_results_bundle.sh
-bash scripts/restore_game_results_bundle.sh dropbox:risk-game-shared/bundles latest_game_results.tar.gz --force
 ```
 
 ## Running Tests
@@ -218,8 +227,8 @@ These traces are designed to evaluate **observable strategy**, not hidden chain-
 
 You can turn a saved game folder into a strategic report with:
 ```bash
-docker-compose exec -T risk-game python /app/scripts/analyze_turn_summaries.py \
-  --game-folder /app/game_results/game__YYYY-MM-DD_HH-MM-SS
+docker compose exec -T risk-game python /app/scripts/analyze_turn_summaries.py \
+  --game-folder /shared-game-results/game__YYYY-MM-DD_HH-MM-SS
 ```
 
 That produces:
@@ -231,7 +240,7 @@ The scoring rubric and the design decisions behind it are documented in [docs/st
 The first manual calibration pass is documented in [docs/strategic-rubric-calibration.md](docs/strategic-rubric-calibration.md).
 
 ## LLM Interaction Logs
-Live runs now also write full prompt/response interaction logs under:
+Live runs now also write full prompt/response interaction logs under the runtime `game_results` root, for example:
 ```text
 game_results/llm_interactions/<game_name>/<player>/round_<NN>/<scope or turn>/
 ```
@@ -255,8 +264,8 @@ Taken together, `game_manifest.json`, `turn_summary_turn_N.json`, and `llm_inter
 
 To replay one saved prompt against live models and compare latency, fallback behavior, and parser validity, use:
 ```bash
-docker-compose exec -T risk-game python /app/scripts/probe_saved_prompt.py \
-  --prompt-json /app/game_results/llm_interactions/<game_name>/<player>/round_<NN>/<scope>/0001_initial_troop_placement.json \
+docker compose exec -T risk-game python /app/scripts/probe_saved_prompt.py \
+  --prompt-json /shared-game-results/llm_interactions/<game_name>/<player>/round_<NN>/<scope>/0001_initial_troop_placement.json \
   --models gpt-5.5-pro gpt-5.5 gpt-5.4 gpt-4.1 \
   --reasoning-efforts none low medium high xhigh
 ```
@@ -265,7 +274,7 @@ This is the fastest way to debug a specific bad turn. It reuses the exact saved 
 
 For direct OpenAI Responses API latency/setting probes outside the game engine, use:
 ```bash
-docker-compose exec -T risk-game python /app/scripts/probe_openai_responses.py \
+docker compose exec -T risk-game python /app/scripts/probe_openai_responses.py \
   --model gpt-5.5-pro \
   --prompt 'What is the capital of England? Reply with exactly one word.' \
   --efforts medium high \
@@ -278,7 +287,7 @@ This is useful when you need to determine whether a model is slow on its own, wh
 ## Prompt Smoke Suite
 Before starting a scored experiment batch, run the prompt smoke suite against the exact candidate models:
 ```bash
-docker-compose exec -T risk-game python /app/scripts/run_prompt_smoke_suite.py \
+docker compose exec -T risk-game python /app/scripts/run_prompt_smoke_suite.py \
   --agents \
     OpenAI:gpt-5.5 \
     OpenAI:gpt-5.4 \
@@ -317,7 +326,7 @@ The three main scripts are:
 
 Container examples:
 ```bash
-docker-compose exec -T risk-game python /app/scripts/run_experiment.py \
+docker compose exec -T risk-game python /app/scripts/run_experiment.py \
   --label frontier_smoke \
   --preset live_turn_frontier \
   --num-games 3
@@ -334,7 +343,7 @@ make experiment-status
 make experiment-summary
 ```
 
-The runner writes one experiment folder under `game_results/experiments/` with:
+The runner writes one experiment folder under the runtime `game_results/experiments/` root, usually `/shared-game-results/experiments/`, with:
 - `experiment_manifest.json`
 - `experiment_status.json`
 - `experiment_results.json`
@@ -365,7 +374,7 @@ Preset timing note:
 For prompt and timing investigations, use the deterministic breakthrough probe instead of a full league. It keeps the real prompt/state/update loop but removes dice variance from the attack resolution.
 
 ```bash
-docker-compose exec -T risk-game bash -lc 'cd /app && python scripts/probe_breakthrough_scenario.py --provider OpenAI --model gpt-5.4-mini --reasoning-effort high --variants minimal_baseline system_prompt_only system_plus_execution_handoff full_live --turn-time-limit-seconds 300 --placement-time-limit-seconds 25'
+docker compose exec -T risk-game bash -lc 'cd /app && python scripts/probe_breakthrough_scenario.py --provider OpenAI --model gpt-5.4-mini --reasoning-effort high --variants minimal_baseline system_prompt_only system_plus_execution_handoff full_live --turn-time-limit-seconds 300 --placement-time-limit-seconds 25'
 ```
 
 Supported variants / probe modes:
@@ -392,7 +401,7 @@ Recommended low-token workflow:
 ## Running OpenAI Leagues
 For repeated OpenAI-vs-OpenAI runs, use:
 ```bash
-docker-compose exec -T risk-game python /app/scripts/run_openai_league.py \
+docker compose exec -T risk-game python /app/scripts/run_openai_league.py \
   --label gpt54_family_league \
   --num-games 10 \
   --reasoning-effort medium \

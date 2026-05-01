@@ -15,7 +15,7 @@ This repository uses a container-first development workflow. If you are an autom
    ```
    If `make` is unavailable:
    ```bash
-   ./start_container.sh
+   bash start_container.sh
    ```
 2. Enter the application container:
    ```bash
@@ -49,9 +49,23 @@ This repository uses a container-first development workflow. If you are an autom
   - `qdrant`: the local vector store sidecar
 - The project depends on `.env` for model/API credentials.
 - The dev container image includes `make` and `sudo` by default.
+- Runtime artifacts normally write to the shared host path mounted at `/shared-game-results`, not to the git checkout, when the standard container workflow is used.
 - Prefer explicit provider model strings over numeric selectors when configuring experiments. The supported provider/model surface is documented in `docs/provider-models.md`.
 - Python packages are intentionally installed inside the container, not in a host virtualenv.
 - If you add tooling, scripts, or docs, prefer commands that execute through the container.
+
+## Artifact Handoff
+- Git is the source of truth for code, docs, configs, and tracked analyses.
+- Dropbox bundle snapshots are the source of truth for cross-machine `game_results` handoff.
+- Preferred source-machine checkpoint:
+  ```bash
+  bash scripts/upload_game_results_bundle.sh
+  ```
+- Preferred target-machine restore:
+  ```bash
+  bash scripts/restore_game_results_bundle.sh dropbox:risk-game-shared/bundles latest_game_results.tar.gz --force
+  ```
+- Raw Dropbox tree sync exists for long-lived mirrors, but do not use it as the default migration path; the small-file overhead is too high.
 
 ## Preferred Commands
 ```bash
@@ -111,6 +125,6 @@ make down
 ## Related Files
 - `README.md`: human-facing setup and usage
 - `Makefile`: standard container commands
-- `start_container.sh`: wrapper around `docker-compose up --build -d`
+- `start_container.sh`: wrapper around `docker compose up --build -d` with fallback to `docker-compose` when needed
 - `custom_startup.sh`: container startup hook
 - `TODO.md`: development roadmap
