@@ -60,11 +60,12 @@ class GameMaster:
         self,
         name: str,
         llm_client: 'LLMClient',
+        planning_llm_client: Optional['LLMClient'] = None,
         runtime_overrides: Optional[Dict[str, Any]] = None,
     ) -> None:
         if len(self.players) >= 6:
             raise ValueError("Cannot add more than 6 players")
-        player = PlayerAgent(name, llm_client)
+        player = PlayerAgent(name, llm_client, planning_llm_client=planning_llm_client)
         player.runtime_overrides = {
             key: value
             for key, value in (runtime_overrides or {}).items()
@@ -82,11 +83,161 @@ class GameMaster:
     ) -> Any:
         return player.runtime_overrides.get(key, default)
 
+    def _find_player_by_name(self, player_name: Optional[str]) -> Optional[PlayerAgent]:
+        if player_name is None:
+            return None
+        return next((player for player in self.players if player.name == player_name), None)
+
+    def _format_console_player_label(self, player_name: Optional[str]) -> str:
+        if player_name is None:
+            return "Unknown"
+        player = self._find_player_by_name(player_name)
+        if player is None:
+            return player_name
+        provider = getattr(player.llm_client, "provider_name", None)
+        model = getattr(player.llm_client, "model_type", None)
+        if provider and model:
+            return f"{player_name} [{provider}:{model}]"
+        if model:
+            return f"{player_name} [{model}]"
+        return player_name
+
+    def _format_console_client_label(
+        self,
+        player: PlayerAgent,
+        *,
+        planning: bool = False,
+    ) -> str:
+        llm_client = (
+            player.planning_llm_client
+            if planning and player.planning_llm_client is not None
+            else player.llm_client
+        )
+        provider = getattr(llm_client, "provider_name", None)
+        model = getattr(llm_client, "model_type", None)
+        if provider and model:
+            return f"{provider}:{model}"
+        return str(model or provider or "unknown")
+
+    def _format_remaining_turn_time_for_console(
+        self,
+        player: PlayerAgent,
+    ) -> str:
+        remaining = player.remaining_turn_time_seconds()
+        if remaining is None:
+            return "unbounded"
+        return f"{remaining:.1f}s"
+
+    def _print_phase_completion(
+        self,
+        *,
+        player: PlayerAgent,
+        completed_phase: str,
+        elapsed_seconds: float,
+        next_phase: Optional[str] = None,
+        planning: bool = False,
+        include_plan: bool = False,
+        extra_detail: Optional[str] = None,
+    ) -> None:
+        parts = [
+            f"{player.name} completed {completed_phase} via "
+            f"{self._format_console_client_label(player, planning=planning)}",
+            f"spent {elapsed_seconds:.1f}s",
+        ]
+        if include_plan:
+            plan_text = (player.turn_strategy or "No explicit plan.").replace("\n", " ")
+            parts.append(f"plan: {plan_text[:220]}")
+        if not planning:
+            parts.append(
+                "remaining execution time "
+                f"{self._format_remaining_turn_time_for_console(player)}"
+            )
+        if extra_detail:
+            parts.append(extra_detail)
+        if next_phase:
+            parts.append(f"starting {next_phase}")
+        print(" | ".join(parts))
+
+    def _print_attack_console_line(
+        self,
+        player: PlayerAgent,
+        from_territory: Optional[str],
+        target_territory: Optional[str],
+        committed_troops: Optional[int],
+    ) -> None:
+        if (
+            from_territory in (None, "Blank")
+            or target_territory in (None, "Blank")
+            or committed_troops in (None, 0)
+        ):
+            return
+
+        attacker_total_troops = self.game_state.check_number_of_troops(
+            player.name, from_territory
+        )
+        defender_control = self.game_state.get_territory_control(target_territory)
+        defender_name = None
+        defender_troops = 0
+        if defender_control is not None:
+            defender_name, defender_troops = defender_control
+
+        print(
+            "ATTACK: "
+            f"{self._format_console_player_label(player.name)} attacks "
+            f"{self._format_console_player_label(defender_name)} | "
+            f"{from_territory} ({attacker_total_troops}) -> "
+            f"{target_territory} ({defender_troops}) | "
+            f"commits {committed_troops} troop(s)"
+        )
+
+    def _print_attack_outcome_console_line(
+        self,
+        *,
+        player: PlayerAgent,
+        defender_name: Optional[str],
+        target_territory: Optional[str],
+        outcome: str,
+    ) -> None:
+        if target_territory in (None, "Blank") or outcome == "no_attack":
+            return
+
+        if outcome == "win":
+            occupying_troops = self.game_state.check_number_of_troops(
+                player.name, target_territory
+            )
+            print(
+                "ATTACK RESULT: "
+                f"{self._format_console_player_label(player.name)} captured "
+                f"{target_territory} from "
+                f"{self._format_console_player_label(defender_name)} | "
+                f"occupying troops: {occupying_troops}"
+            )
+            return
+
+        if defender_name is None:
+            return
+
+        remaining_defender_troops = self.game_state.check_number_of_troops(
+            defender_name, target_territory
+        )
+        print(
+            "ATTACK RESULT: "
+            f"{self._format_console_player_label(defender_name)} held "
+            f"{target_territory} against "
+            f"{self._format_console_player_label(player.name)} | "
+            f"remaining defenders: {remaining_defender_troops}"
+        )
+
     def _apply_runtime_settings_to_player(self, player: "PlayerAgent") -> None:
         player.turn_time_limit_seconds = self._runtime_value(
             player,
             "turn_time_limit_seconds",
             self.rules.turn_time_limit_seconds,
+        )
+        player.planning_time_limit_seconds = self._runtime_value(
+            player,
+            "planning_time_limit_seconds",
+            self.rules.planning_time_limit_seconds,
         )
         player.placement_time_limit_seconds = self._runtime_value(
             player,
@@ -498,9 +649,6 @@ class GameMaster:
     def phase_1_troop_placement(self, player: 'PlayerAgent')-> None:
         self.phase = 1
         player.troops = 0
-        # Make the player define a strategy for the turn
-        player.define_strategy_for_move(self.rules, self.game_state)
-        self._capture_turn_plan(player)
 
         # figure out if the player needs to trade in cards (i.e. has 5 or more cards)
         while len(self.player_cards[player.name]) >= 5:
@@ -521,7 +669,7 @@ class GameMaster:
 
         # end phase 1
 
-    def phase_2_attack(self, player: 'PlayerAgent')-> None:
+    def phase_2_attack(self, player: 'PlayerAgent') -> int:
         self.phase = 2
         # print(f"{player.name} is attacking")
     
@@ -529,7 +677,7 @@ class GameMaster:
 
         # if game is over, return to end the game
         if self.game_over:
-            return
+            return successful_attacks
        
 
         if successful_attacks > 0:  # Player gets a card if they won an attack
@@ -539,6 +687,7 @@ class GameMaster:
                 f"{player.name} conquered at least one territory this turn "
                 f"and received a card"
             )
+        return successful_attacks
 
 
     def phase_3_fortify(self, player: 'PlayerAgent') -> None:
@@ -995,6 +1144,12 @@ class GameMaster:
             )
 
             if is_valid:
+                self._print_attack_console_line(
+                    player,
+                    from_territory,
+                    proposed_move.get("territory_name"),
+                    proposed_move.get("num_troops"),
+                )
                 # print("Moves are valid")
                 # calculate the outcome of the attack
                 outcome, defender = (
@@ -1028,6 +1183,12 @@ class GameMaster:
                     event["post_state"] = snapshot_player_state(
                         self.game_state, player.name
                     )
+                    self._print_attack_outcome_console_line(
+                        player=player,
+                        defender_name=defender,
+                        target_territory=proposed_move.get("territory_name"),
+                        outcome=outcome,
+                    )
                     self._record_turn_event(event)
                     # check if victory condition is met
                     if self.is_game_over():
@@ -1048,6 +1209,12 @@ class GameMaster:
                     event["defender"] = defender
                     event["post_state"] = snapshot_player_state(
                         self.game_state, player.name
+                    )
+                    self._print_attack_outcome_console_line(
+                        player=player,
+                        defender_name=defender,
+                        target_territory=proposed_move.get("territory_name"),
+                        outcome=outcome,
                     )
                     self._record_turn_event(event)
                 
@@ -1243,15 +1410,58 @@ class GameMaster:
             scope="turn",
         )
         self._start_turn_trace(player)
+        planning_started_at = time.time()
+        player.define_strategy_for_move(self.rules, self.game_state)
+        planning_elapsed = time.time() - planning_started_at
+        self._capture_turn_plan(player)
+        self._print_phase_completion(
+            player=player,
+            completed_phase="planning mode",
+            elapsed_seconds=planning_elapsed,
+            next_phase=(
+                f"execution turn timer ({player.turn_time_limit_seconds}s) "
+                "and placement mode"
+            ),
+            planning=True,
+            include_plan=True,
+        )
         player.start_turn_timer(player.turn_time_limit_seconds)
         # Phase 1: Troop Placement
+        placement_started_at = time.time()
         self.phase_1_troop_placement(player)
+        placement_elapsed = time.time() - placement_started_at
         if not player.turn_time_exhausted:
-            self.phase_2_attack(player)
+            self._print_phase_completion(
+                player=player,
+                completed_phase="placement mode",
+                elapsed_seconds=placement_elapsed,
+                next_phase="attack mode",
+            )
+        if not player.turn_time_exhausted:
+            attack_started_at = time.time()
+            successful_attacks = self.phase_2_attack(player)
+            attack_elapsed = time.time() - attack_started_at
+            next_phase = None
+            if not self.game_over and not player.turn_time_exhausted:
+                next_phase = "fortify mode"
+            self._print_phase_completion(
+                player=player,
+                completed_phase="attack mode",
+                elapsed_seconds=attack_elapsed,
+                next_phase=next_phase,
+                extra_detail=f"successful attacks {successful_attacks}",
+            )
         else:
             print(f"{player.name} exhausted the turn timer during placement.")
         if not self.game_over and not player.turn_time_exhausted:
+            fortify_started_at = time.time()
             self.phase_3_fortify(player)
+            fortify_elapsed = time.time() - fortify_started_at
+            self._print_phase_completion(
+                player=player,
+                completed_phase="fortify mode",
+                elapsed_seconds=fortify_elapsed,
+            )
         print(f"{player.name} has completed their turn.")
         completed_turn = self._finalize_turn_trace(player, turn_number)
         player.clear_turn_timer()

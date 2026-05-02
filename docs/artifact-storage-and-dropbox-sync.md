@@ -119,6 +119,16 @@ Tracked long-form analysis notes live under:
   - this is a smoke or pilot result, not a full championship
   - useful for checking viability, turn timing, and provider behavior before the staged cross-provider batch
 
+5. Cross-Provider Frontier Smoke 2
+- Type: completed two-game scored smoke batch
+- Raw artifacts:
+  - `/home/hcekne/shared/risk-game/game_results/experiments/experiment__2026-05-01_09-03-34__frontier_smoke`
+- Tracked analysis:
+  - [2026-05-01_cross-provider-frontier-smoke.md](experiment-suites/2026-q2-strategic-tests/2026-05-01_cross-provider-frontier-smoke.md)
+- Notes:
+  - this is still a pilot, not a final cross-provider championship
+  - it is the strongest current tracked evidence that `gpt-5.5` is operationally too slow for the standard `90s / 15s` live-turn condition
+
 ### Model And Prompt Probes
 
 1. Breakthrough scenario probes

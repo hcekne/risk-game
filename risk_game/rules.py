@@ -15,6 +15,7 @@ class Rules:
         self.key_areas = config.key_areas
         self.max_rounds = config.max_rounds
         self.turn_time_limit_seconds = config.turn_time_limit_seconds
+        self.planning_time_limit_seconds = config.planning_time_limit_seconds
         self.placement_time_limit_seconds = config.placement_time_limit_seconds
         self.placement_reasoning_effort = config.placement_reasoning_effort
         self.planning_reasoning_effort = config.planning_reasoning_effort

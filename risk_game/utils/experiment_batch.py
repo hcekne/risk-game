@@ -5,7 +5,12 @@ from pathlib import Path
 from statistics import mean
 from typing import Any, Dict, Iterable, List, Optional
 
-from risk_game.experiments import AgentSpec
+from risk_game.experiments import (
+    AgentSpec,
+    agent_spec_has_planning_client_override,
+    planning_client_config_from_spec,
+    primary_client_config_from_spec,
+)
 from risk_game.game_config import GameConfig
 from risk_game.llm_clients.llm_client import create_llm_client
 from risk_game.paths import get_game_results_subdir
@@ -69,7 +74,15 @@ def agent_spec_to_dict(spec: AgentSpec) -> Dict[str, Any]:
         "enable_thinking": spec.enable_thinking,
         "thinking_budget": spec.thinking_budget,
         "thinking_effort": spec.thinking_effort,
+        "planning_provider": spec.planning_provider,
+        "planning_model": spec.planning_model,
+        "planning_use_responses_api": spec.planning_use_responses_api,
+        "planning_verbosity": spec.planning_verbosity,
+        "planning_enable_thinking": spec.planning_enable_thinking,
+        "planning_thinking_budget": spec.planning_thinking_budget,
+        "planning_thinking_effort": spec.planning_thinking_effort,
         "turn_time_limit_seconds": spec.turn_time_limit_seconds,
+        "planning_time_limit_seconds": spec.planning_time_limit_seconds,
         "placement_time_limit_seconds": spec.placement_time_limit_seconds,
         "placement_reasoning_effort": spec.placement_reasoning_effort,
         "planning_reasoning_effort": spec.planning_reasoning_effort,
@@ -186,48 +199,57 @@ def run_agent_preflight(agent_specs: List[AgentSpec], timeout_seconds: float = 3
     checked = set()
     results = []
     for spec in agent_specs:
-        key = (
-            spec.provider,
-            spec.model,
-            spec.reasoning_effort,
-            spec.verbosity,
-            spec.enable_thinking,
-            spec.thinking_budget,
-            spec.thinking_effort,
-        )
-        if key in checked:
-            continue
-        checked.add(key)
+        client_configs = [("primary", primary_client_config_from_spec(spec))]
+        if agent_spec_has_planning_client_override(spec):
+            planning_config = planning_client_config_from_spec(spec)
+            if planning_config is not None:
+                client_configs.append(("planning", planning_config))
 
-        client = create_llm_client(
-            spec.provider,
-            spec.model,
-            use_responses_api=spec.use_responses_api,
-            reasoning_effort=spec.reasoning_effort,
-            verbosity=spec.verbosity,
-            enable_thinking=spec.enable_thinking,
-            thinking_budget=spec.thinking_budget,
-            thinking_effort=spec.thinking_effort,
-        )
-        started_at = datetime.now(timezone.utc)
-        response = client.get_chat_completion(
-            "Reply with exactly OK.",
-            reasoning_effort=spec.reasoning_effort,
-            timeout_seconds=timeout_seconds,
-            max_attempts_override=1,
-        )
-        results.append(
-            {
-                "provider": spec.provider,
-                "model": spec.model,
-                "name": spec.name,
-                "started_at_utc": started_at.replace(microsecond=0)
-                .isoformat()
-                .replace("+00:00", "Z"),
-                "response_preview": response.strip()[:80],
-                "timeout_seconds": timeout_seconds,
-            }
-        )
+        for client_role, client_config in client_configs:
+            key = (
+                client_config["provider"],
+                client_config["model"],
+                client_config["reasoning_effort"],
+                client_config["verbosity"],
+                client_config["enable_thinking"],
+                client_config["thinking_budget"],
+                client_config["thinking_effort"],
+                client_config["use_responses_api"],
+            )
+            if key in checked:
+                continue
+            checked.add(key)
+
+            client = create_llm_client(
+                client_config["provider"],
+                client_config["model"],
+                use_responses_api=client_config["use_responses_api"],
+                reasoning_effort=client_config["reasoning_effort"],
+                verbosity=client_config["verbosity"],
+                enable_thinking=client_config["enable_thinking"],
+                thinking_budget=client_config["thinking_budget"],
+                thinking_effort=client_config["thinking_effort"],
+            )
+            started_at = datetime.now(timezone.utc)
+            response = client.get_chat_completion(
+                "Reply with exactly OK.",
+                reasoning_effort=client_config["reasoning_effort"],
+                timeout_seconds=timeout_seconds,
+                max_attempts_override=1,
+            )
+            results.append(
+                {
+                    "provider": client_config["provider"],
+                    "model": client_config["model"],
+                    "name": spec.name,
+                    "client_role": client_role,
+                    "started_at_utc": started_at.replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                    "response_preview": response.strip()[:80],
+                    "timeout_seconds": timeout_seconds,
+                }
+            )
     return results
 
 

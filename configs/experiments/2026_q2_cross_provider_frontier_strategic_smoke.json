@@ -1,0 +1,58 @@
+[
+  {
+    "name": "gpt-5.4",
+    "provider": "OpenAI",
+    "model": "gpt-5.4",
+    "reasoning_effort": "medium",
+    "verbosity": "low",
+    "planning_provider": "OpenAI",
+    "planning_model": "gpt-5.5",
+    "planning_verbosity": "low",
+    "planning_time_limit_seconds": 90,
+    "placement_reasoning_effort": "medium",
+    "planning_reasoning_effort": "high",
+    "attack_reasoning_effort": "medium",
+    "fortify_reasoning_effort": "medium",
+    "card_trade_reasoning_effort": "low"
+  },
+  {
+    "name": "claude-opus-4-7",
+    "provider": "Anthropic",
+    "model": "claude-opus-4-7",
+    "enable_thinking": true,
+    "planning_time_limit_seconds": 90,
+    "placement_reasoning_effort": "medium",
+    "planning_reasoning_effort": "high",
+    "attack_reasoning_effort": "medium",
+    "fortify_reasoning_effort": "medium",
+    "card_trade_reasoning_effort": "low"
+  },
+  {
+    "name": "gemini-3.1-pro-preview",
+    "provider": "Gemini",
+    "model": "gemini-3.1-pro-preview",
+    "reasoning_effort": "medium",
+    "enable_thinking": true,
+    "planning_time_limit_seconds": 90,
+    "placement_reasoning_effort": "medium",
+    "planning_reasoning_effort": "high",
+    "attack_reasoning_effort": "medium",
+    "fortify_reasoning_effort": "medium",
+    "card_trade_reasoning_effort": "low"
+  },
+  {
+    "name": "kimi-k2.6",
+    "provider": "Moonshot",
+    "model": "kimi-k2.6",
+    "enable_thinking": false,
+    "planning_provider": "Moonshot",
+    "planning_model": "kimi-k2.6",
+    "planning_enable_thinking": true,
+    "planning_time_limit_seconds": 90,
+    "placement_reasoning_effort": "medium",
+    "planning_reasoning_effort": "high",
+    "attack_reasoning_effort": "medium",
+    "fortify_reasoning_effort": "medium",
+    "card_trade_reasoning_effort": "low"
+  }
+]

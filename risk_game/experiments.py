@@ -18,13 +18,109 @@ class AgentSpec:
     enable_thinking: bool = False
     thinking_budget: int = 2000
     thinking_effort: Optional[str] = None
+    planning_provider: Optional[str] = None
+    planning_model: Optional[int | str] = None
+    planning_use_responses_api: Optional[bool] = None
+    planning_verbosity: Optional[str] = None
+    planning_enable_thinking: Optional[bool] = None
+    planning_thinking_budget: Optional[int] = None
+    planning_thinking_effort: Optional[str] = None
     turn_time_limit_seconds: Optional[int] = None
+    planning_time_limit_seconds: Optional[int] = None
     placement_time_limit_seconds: Optional[int] = None
     placement_reasoning_effort: Optional[str] = None
     planning_reasoning_effort: Optional[str] = None
     attack_reasoning_effort: Optional[str] = None
     fortify_reasoning_effort: Optional[str] = None
     card_trade_reasoning_effort: Optional[str] = None
+
+
+PLANNING_CLIENT_OVERRIDE_FIELDS = (
+    "planning_provider",
+    "planning_model",
+    "planning_use_responses_api",
+    "planning_verbosity",
+    "planning_enable_thinking",
+    "planning_thinking_budget",
+    "planning_thinking_effort",
+)
+
+
+def agent_spec_has_planning_client_override(spec: AgentSpec) -> bool:
+    return any(getattr(spec, field) is not None for field in PLANNING_CLIENT_OVERRIDE_FIELDS)
+
+
+def primary_client_config_from_spec(spec: AgentSpec) -> dict:
+    return {
+        "provider": spec.provider,
+        "model": spec.model,
+        "use_responses_api": spec.use_responses_api,
+        "reasoning_effort": spec.reasoning_effort,
+        "verbosity": spec.verbosity,
+        "enable_thinking": spec.enable_thinking,
+        "thinking_budget": spec.thinking_budget,
+        "thinking_effort": spec.thinking_effort,
+    }
+
+
+def planning_client_config_from_spec(spec: AgentSpec) -> Optional[dict]:
+    if not agent_spec_has_planning_client_override(spec):
+        return None
+
+    return {
+        "provider": spec.provider if spec.planning_provider is None else spec.planning_provider,
+        "model": spec.model if spec.planning_model is None else spec.planning_model,
+        "use_responses_api": (
+            spec.use_responses_api
+            if spec.planning_use_responses_api is None
+            else spec.planning_use_responses_api
+        ),
+        "reasoning_effort": (
+            spec.reasoning_effort
+            if spec.planning_reasoning_effort is None
+            else spec.planning_reasoning_effort
+        ),
+        "verbosity": spec.verbosity if spec.planning_verbosity is None else spec.planning_verbosity,
+        "enable_thinking": (
+            spec.enable_thinking
+            if spec.planning_enable_thinking is None
+            else spec.planning_enable_thinking
+        ),
+        "thinking_budget": (
+            spec.thinking_budget
+            if spec.planning_thinking_budget is None
+            else spec.planning_thinking_budget
+        ),
+        "thinking_effort": (
+            spec.thinking_effort
+            if spec.planning_thinking_effort is None
+            else spec.planning_thinking_effort
+        ),
+    }
+
+
+def create_llm_client_from_agent_config(config: dict):
+    return llm_client.create_llm_client(
+        config["provider"],
+        config["model"],
+        use_responses_api=config["use_responses_api"],
+        reasoning_effort=config["reasoning_effort"],
+        verbosity=config["verbosity"],
+        enable_thinking=config["enable_thinking"],
+        thinking_budget=config["thinking_budget"],
+        thinking_effort=config["thinking_effort"],
+    )
+
+
+def build_primary_llm_client_from_spec(spec: AgentSpec):
+    return create_llm_client_from_agent_config(primary_client_config_from_spec(spec))
+
+
+def build_planning_llm_client_from_spec(spec: AgentSpec):
+    planning_config = planning_client_config_from_spec(spec)
+    if planning_config is None:
+        return None
+    return create_llm_client_from_agent_config(planning_config)
 
 
 def build_openai_gpt54_family(
@@ -298,6 +394,91 @@ def build_live_turn_frontier_roster(
     ]
 
 
+def build_live_turn_frontier_strategic_roster(
+    *,
+    openai_model: str = "gpt-5.4",
+    openai_planning_model: Optional[str] = "gpt-5.5",
+    openai_reasoning_effort: str = "medium",
+    openai_verbosity: str = "low",
+    anthropic_model: str = "claude-opus-4-7",
+    anthropic_enable_thinking: bool = True,
+    anthropic_thinking_effort: Optional[str] = None,
+    gemini_model: str = "gemini-3.1-pro-preview",
+    gemini_reasoning_effort: str = "medium",
+    gemini_include_thoughts: bool = True,
+    moonshot_model: str = "kimi-k2.6",
+    moonshot_enable_thinking: bool = False,
+    moonshot_planning_enable_thinking: bool = True,
+    planning_time_limit_seconds: int = 90,
+    placement_reasoning_effort: str = "medium",
+    planning_reasoning_effort: str = "high",
+    attack_reasoning_effort: str = "medium",
+    fortify_reasoning_effort: str = "medium",
+    card_trade_reasoning_effort: str = "low",
+) -> List[AgentSpec]:
+    """Build a higher-ceiling cross-provider roster with isolated planning time.
+
+    This preset targets "best live strategic play under shared phase rules"
+    rather than the stricter historical low-latency frontier smoke condition.
+
+    Provider intent:
+    - OpenAI executes with `gpt-5.4`, but plans with `gpt-5.5`.
+    - Anthropic uses one thinking-enabled client and varies effort by phase.
+    - Gemini uses one client; planning runs at `high`, execution phases at `medium`.
+    - Kimi keeps execution thinking disabled, but enables thinking on the
+      isolated planning prompt only.
+    """
+
+    shared_phase_overrides = {
+        "planning_time_limit_seconds": planning_time_limit_seconds,
+        "placement_reasoning_effort": placement_reasoning_effort,
+        "planning_reasoning_effort": planning_reasoning_effort,
+        "attack_reasoning_effort": attack_reasoning_effort,
+        "fortify_reasoning_effort": fortify_reasoning_effort,
+        "card_trade_reasoning_effort": card_trade_reasoning_effort,
+    }
+
+    return [
+        AgentSpec(
+            name=openai_model,
+            provider="OpenAI",
+            model=openai_model,
+            reasoning_effort=openai_reasoning_effort,
+            verbosity=openai_verbosity,
+            planning_provider="OpenAI" if openai_planning_model is not None else None,
+            planning_model=openai_planning_model,
+            planning_verbosity=openai_verbosity if openai_planning_model is not None else None,
+            **shared_phase_overrides,
+        ),
+        AgentSpec(
+            name=anthropic_model,
+            provider="Anthropic",
+            model=anthropic_model,
+            enable_thinking=anthropic_enable_thinking,
+            thinking_effort=anthropic_thinking_effort,
+            **shared_phase_overrides,
+        ),
+        AgentSpec(
+            name=gemini_model,
+            provider="Gemini",
+            model=gemini_model,
+            reasoning_effort=gemini_reasoning_effort,
+            enable_thinking=gemini_include_thoughts,
+            **shared_phase_overrides,
+        ),
+        AgentSpec(
+            name=moonshot_model,
+            provider="Moonshot",
+            model=moonshot_model,
+            enable_thinking=moonshot_enable_thinking,
+            planning_provider="Moonshot",
+            planning_model=moonshot_model,
+            planning_enable_thinking=moonshot_planning_enable_thinking,
+            **shared_phase_overrides,
+        ),
+    ]
+
+
 class Experiment:
     def __init__(
         self,
@@ -339,6 +520,8 @@ class Experiment:
             f"Key Areas: {key_areas}\n"
             f"Max Rounds: {self.config.max_rounds}\n"
             f"Turn Time Limit Seconds: {self.config.turn_time_limit_seconds}\n"
+            f"Planning Time Limit Seconds: "
+            f"{self.config.planning_time_limit_seconds}\n"
             f"Placement Time Limit Seconds: "
             f"{self.config.placement_time_limit_seconds}\n"
             f"Placement Reasoning Effort: "
@@ -361,6 +544,7 @@ class Experiment:
         for spec in agent_specs:
             runtime_overrides = {
                 "turn_time_limit_seconds": spec.turn_time_limit_seconds,
+                "planning_time_limit_seconds": spec.planning_time_limit_seconds,
                 "placement_time_limit_seconds": spec.placement_time_limit_seconds,
                 "placement_reasoning_effort": spec.placement_reasoning_effort,
                 "planning_reasoning_effort": spec.planning_reasoning_effort,
@@ -370,16 +554,8 @@ class Experiment:
             }
             game.add_player(
                 name=spec.name,
-                llm_client=llm_client.create_llm_client(
-                    spec.provider,
-                    spec.model,
-                    use_responses_api=spec.use_responses_api,
-                    reasoning_effort=spec.reasoning_effort,
-                    verbosity=spec.verbosity,
-                    enable_thinking=spec.enable_thinking,
-                    thinking_budget=spec.thinking_budget,
-                    thinking_effort=spec.thinking_effort,
-                ),
+                llm_client=build_primary_llm_client_from_spec(spec),
+                planning_llm_client=build_planning_llm_client_from_spec(spec),
                 runtime_overrides=runtime_overrides,
             )
 

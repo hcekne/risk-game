@@ -25,13 +25,19 @@ _TERRITORY_NAME_PATTERN = re.compile(
 
 
 def _llm_call_worker(
-    player: "PlayerAgent",
+    llm_client: LLMClient,
     message_content: str,
     request_kwargs: Dict[str, object],
     response_queue: multiprocessing.Queue,
 ) -> None:
     try:
-        response = player.send_message(message_content, **request_kwargs)
+        if request_kwargs:
+            try:
+                response = llm_client.get_chat_completion(message_content, **request_kwargs)
+            except TypeError:
+                response = llm_client.get_chat_completion(message_content)
+        else:
+            response = llm_client.get_chat_completion(message_content)
         response_queue.put(("ok", response))
     except Exception as exc:
         response_queue.put(("error", type(exc).__name__, str(exc)))
@@ -40,9 +46,15 @@ class PlayerAgent:
     TURN_TIMEOUT_SAFETY_MARGIN_SECONDS = 5.0
     REASONING_EFFORT_ORDER = ("none", "minimal", "low", "medium", "high", "xhigh")
 
-    def __init__(self, name: str, llm_client: LLMClient)-> None:
+    def __init__(
+        self,
+        name: str,
+        llm_client: LLMClient,
+        planning_llm_client: Optional[LLMClient] = None,
+    ) -> None:
         self.name: str = name
         self.llm_client: LLMClient = llm_client
+        self.planning_llm_client: Optional[LLMClient] = planning_llm_client
         self.include_reasoning: bool = True
         self.troops: int = 0
         self.turn_strategy: str = ""
@@ -57,6 +69,7 @@ class PlayerAgent:
         self.turn_deadline: Optional[float] = None
         self.turn_time_exhausted: bool = False
         self.turn_time_limit_seconds: int = 90
+        self.planning_time_limit_seconds: Optional[int] = None
         self.placement_time_limit_seconds: int = 15
         self.placement_reasoning_effort: Optional[str] = "low"
         self.planning_reasoning_effort: Optional[str] = "medium"
@@ -78,23 +91,32 @@ class PlayerAgent:
                 f"LLM Client: {self.llm_client}\n"
             f"Accumulated Turn Time: {self.accumulated_turn_time:.2f} seconds\n")
     
-    def send_message(self, message_content: str, **kwargs) -> str:
+    def send_message(
+        self,
+        message_content: str,
+        *,
+        llm_client: Optional[LLMClient] = None,
+        **kwargs,
+    ) -> str:
+        active_client = self.llm_client if llm_client is None else llm_client
         if kwargs:
             try:
-                return self.llm_client.get_chat_completion(message_content, **kwargs)
+                return active_client.get_chat_completion(message_content, **kwargs)
             except TypeError:
                 pass
-        return self.llm_client.get_chat_completion(message_content)
+        return active_client.get_chat_completion(message_content)
 
     def _call_llm_with_timeout(
         self,
         message_content: str,
         *,
+        llm_client: Optional[LLMClient] = None,
         timeout_seconds: Optional[float] = None,
         **kwargs,
     ) -> str:
+        active_client = self.llm_client if llm_client is None else llm_client
         if timeout_seconds is None:
-            return self.send_message(message_content, **kwargs)
+            return self.send_message(message_content, llm_client=active_client, **kwargs)
         if timeout_seconds <= 0:
             raise TimeoutError("Wall-clock timeout expired before LLM call.")
         request_kwargs = dict(kwargs)
@@ -104,7 +126,7 @@ class PlayerAgent:
             response_queue = ctx.Queue()
             process = ctx.Process(
                 target=_llm_call_worker,
-                args=(self, message_content, request_kwargs, response_queue),
+                args=(active_client, message_content, request_kwargs, response_queue),
             )
             process.start()
             process.join(timeout_seconds)
@@ -125,7 +147,11 @@ class PlayerAgent:
                 raise RuntimeError(f"{error_name}: {error_message}")
             raise RuntimeError("LLM worker exited without returning a response.")
         if not hasattr(signal, "setitimer"):
-            return self.send_message(message_content, **request_kwargs)
+            return self.send_message(
+                message_content,
+                llm_client=active_client,
+                **request_kwargs,
+            )
 
         def _timeout_handler(signum, frame):
             raise TimeoutError(
@@ -137,7 +163,11 @@ class PlayerAgent:
         signal.signal(signal.SIGALRM, _timeout_handler)
         signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
         try:
-            return self.send_message(message_content, **request_kwargs)
+            return self.send_message(
+                message_content,
+                llm_client=active_client,
+                **request_kwargs,
+            )
         finally:
             signal.setitimer(signal.ITIMER_REAL, *previous_timer)
             signal.signal(signal.SIGALRM, previous_handler)
@@ -167,6 +197,8 @@ class PlayerAgent:
         *,
         phase: str,
         prompt: str,
+        llm_client: LLMClient,
+        client_role: str,
         response: str,
         used_fallback_response: bool,
         error: Optional[str],
@@ -185,8 +217,9 @@ class PlayerAgent:
             "interaction_index": None,
             "phase": phase,
             "scope": self.current_interaction_scope,
-            "provider": getattr(self.llm_client, "provider_name", "unknown"),
-            "model": getattr(self.llm_client, "model_type", "unknown"),
+            "provider": getattr(llm_client, "provider_name", "unknown"),
+            "model": getattr(llm_client, "model_type", "unknown"),
+            "client_role": client_role,
             "prompt_length": len(prompt),
             "response_length": len(response),
             "raw_response": response,
@@ -214,8 +247,9 @@ class PlayerAgent:
                 ),
                 "interaction_index": self._interaction_sequence,
                 "player": self.name,
-                "provider": getattr(self.llm_client, "provider_name", "unknown"),
-                "model": getattr(self.llm_client, "model_type", "unknown"),
+                "provider": getattr(llm_client, "provider_name", "unknown"),
+                "model": getattr(llm_client, "model_type", "unknown"),
+                "client_role": client_role,
                 "scope": self.current_interaction_scope,
                 "game_round": self.current_game_round,
                 "turn_number": self.current_turn_number,
@@ -486,28 +520,35 @@ class PlayerAgent:
         }
         return fallback_responses.get(phase, "")
 
+    def _client_for_phase(self, phase: str) -> Tuple[LLMClient, str]:
+        if phase == "pre_turn_planning" and self.planning_llm_client is not None:
+            return self.planning_llm_client, "planning"
+        return self.llm_client, "primary"
+
     def _resolve_reasoning_effort_for_call(
         self,
         reasoning_effort: Optional[str],
+        llm_client: Optional[LLMClient] = None,
     ) -> Optional[str]:
+        active_client = self.llm_client if llm_client is None else llm_client
         if reasoning_effort is None:
             return None
 
-        if getattr(self.llm_client, "provider_name", "") != "OpenAI":
+        if getattr(active_client, "provider_name", "") != "OpenAI":
             return reasoning_effort
 
-        if not getattr(self.llm_client, "supports_reasoning", False):
+        if not getattr(active_client, "supports_reasoning", False):
             return None
 
         supported_efforts_resolver = getattr(
-            self.llm_client, "supported_reasoning_efforts", None
+            active_client, "supported_reasoning_efforts", None
         )
         if not callable(supported_efforts_resolver):
             return reasoning_effort
 
         try:
             supported_efforts = tuple(
-                supported_efforts_resolver(getattr(self.llm_client, "model_type", ""))
+                supported_efforts_resolver(getattr(active_client, "model_type", ""))
             )
         except Exception:
             return reasoning_effort
@@ -545,8 +586,10 @@ class PlayerAgent:
         error = None
         effective_timeout = timeout_seconds
         started_at = time.time()
+        active_client, client_role = self._client_for_phase(phase)
         resolved_reasoning_effort = self._resolve_reasoning_effort_for_call(
-            reasoning_effort
+            reasoning_effort,
+            llm_client=active_client,
         )
         budget = self._compute_prompt_budget(phase, timeout_seconds)
         remaining_turn_time = budget["remaining_turn_time_seconds"]
@@ -569,6 +612,8 @@ class PlayerAgent:
                 return self._record_llm_decision(
                     phase=phase,
                     prompt=prompt,
+                    llm_client=active_client,
+                    client_role=client_role,
                     response=response,
                     used_fallback_response=used_fallback_response,
                     error=error,
@@ -592,6 +637,8 @@ class PlayerAgent:
                 return self._record_llm_decision(
                     phase=phase,
                     prompt=prompt,
+                    llm_client=active_client,
+                    client_role=client_role,
                     response=response,
                     used_fallback_response=used_fallback_response,
                     error=error,
@@ -612,6 +659,7 @@ class PlayerAgent:
                 )
             response = self._call_llm_with_timeout(
                 prompt,
+                llm_client=active_client,
                 timeout_seconds=effective_timeout,
                 reasoning_effort=resolved_reasoning_effort,
                 max_attempts_override=1 if effective_timeout is not None else None,
@@ -639,6 +687,8 @@ class PlayerAgent:
         return self._record_llm_decision(
             phase=phase,
             prompt=prompt,
+            llm_client=active_client,
+            client_role=client_role,
             response=response,
             used_fallback_response=used_fallback_response,
             error=error,
@@ -1323,7 +1373,7 @@ OUTPUT FORMAT:
             number_of_territories)
         time_budget_block = self._format_time_budget_block(
             "pre_turn_planning",
-            None,
+            self.planning_time_limit_seconds,
         )
 
 
@@ -1379,6 +1429,7 @@ RESPONSE RULES:
                     "pre_turn_planning",
                     prompt,
                     reasoning_effort=self.planning_reasoning_effort,
+                    timeout_seconds=self.planning_time_limit_seconds,
                 ))
         )
         

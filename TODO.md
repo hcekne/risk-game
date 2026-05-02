@@ -205,6 +205,7 @@ Reference docs:
 - [ ] Add a cheap provider smoke suite that checks prompt understanding, latency, and output-format compliance across OpenAI, Anthropic, and Gemini.
 - [x] Add a cheap provider smoke suite that checks prompt understanding, latency, and output-format compliance across OpenAI, Anthropic, Gemini, and Moonshot.
 - [x] Run the prompt smoke suite on the initial candidate roster before starting the first scored batch.
+- [ ] Trim live console noise after the current validation pass so the game is easier to follow from the terminal while keeping the phase-completion timing lines, saved-plan summaries, and high-signal attack summaries.
 - [ ] Re-run a clean short OpenAI baseline with `gpt-5.5`, `gpt-5.4`, and `gpt-4.1`.
 - [x] Decide and document the current live-turn-safe model roster in the experiment docs.
 - [ ] Design and benchmark 2-3 candidate state representations on fixed board states.

@@ -8,6 +8,7 @@ from risk_game.experiments import (
     AgentSpec,
     Experiment,
     build_live_turn_frontier_roster,
+    build_live_turn_frontier_strategic_roster,
     build_openai_generation_ladder,
     build_openai_mini_high_strategic_hybrid_arena,
     build_openai_mini_medium_vs_high_arena,
@@ -43,6 +44,7 @@ PRESET_NAMES = [
     "openai_mini_high_strategic_hybrid",
     "openai_nano_reasoning",
     "live_turn_frontier",
+    "live_turn_frontier_strategic",
 ]
 
 
@@ -82,6 +84,15 @@ def parse_args() -> argparse.Namespace:
         help="Per-turn wall-clock budget.",
     )
     parser.add_argument(
+        "--planning-time-limit-seconds",
+        type=int,
+        default=None,
+        help=(
+            "Optional isolated wall-clock budget for the single pre-turn planning "
+            "prompt. This runs before the shared execution turn timer starts."
+        ),
+    )
+    parser.add_argument(
         "--placement-time-limit-seconds",
         type=int,
         default=None,
@@ -89,7 +100,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--placement-reasoning-effort",
-        default="low",
+        default=None,
         help="Reasoning effort used only for placement prompts.",
     )
     parser.add_argument(
@@ -159,13 +170,17 @@ def build_agent_specs(args: argparse.Namespace) -> List[AgentSpec]:
         return build_openai_nano_reasoning_arena(verbosity=args.verbosity)
     if args.preset == "live_turn_frontier":
         return build_live_turn_frontier_roster()
+    if args.preset == "live_turn_frontier_strategic":
+        return build_live_turn_frontier_strategic_roster()
 
     raise ValueError("Either --preset or --agent-specs-file must be provided.")
 
 
 def build_config(args: argparse.Namespace) -> GameConfig:
     default_turn_time_limit_seconds = 90
+    default_planning_time_limit_seconds = None
     default_placement_time_limit_seconds = 15
+    default_placement_reasoning_effort = "low"
     if args.preset == "openai_mini_reasoning":
         default_turn_time_limit_seconds = 120
         default_placement_time_limit_seconds = 25
@@ -175,23 +190,39 @@ def build_config(args: argparse.Namespace) -> GameConfig:
     if args.preset == "openai_mini_high_strategic_hybrid":
         default_turn_time_limit_seconds = 300
         default_placement_time_limit_seconds = 25
+    if args.preset == "live_turn_frontier_strategic":
+        default_planning_time_limit_seconds = 90
+        default_placement_reasoning_effort = "medium"
 
     turn_time_limit_seconds = (
         default_turn_time_limit_seconds
         if args.turn_time_limit_seconds is None
         else args.turn_time_limit_seconds
     )
+    planning_time_limit_seconds = (
+        default_planning_time_limit_seconds
+        if args.planning_time_limit_seconds is None
+        else args.planning_time_limit_seconds
+    )
     placement_time_limit_seconds = (
         default_placement_time_limit_seconds
         if args.placement_time_limit_seconds is None
         else args.placement_time_limit_seconds
     )
-
-    planning_reasoning_effort = resolve_phase_reasoning_effort(
-        args.reasoning_effort,
-        args.planning_reasoning_effort,
-        "medium",
+    placement_reasoning_effort = (
+        default_placement_reasoning_effort
+        if args.placement_reasoning_effort is None
+        else args.placement_reasoning_effort
     )
+
+    if args.preset == "live_turn_frontier_strategic" and args.planning_reasoning_effort is None:
+        planning_reasoning_effort = "high"
+    else:
+        planning_reasoning_effort = resolve_phase_reasoning_effort(
+            args.reasoning_effort,
+            args.planning_reasoning_effort,
+            "medium",
+        )
     attack_reasoning_effort = resolve_phase_reasoning_effort(
         args.reasoning_effort,
         args.attack_reasoning_effort,
@@ -213,8 +244,9 @@ def build_config(args: argparse.Namespace) -> GameConfig:
         capitals=False,
         max_rounds=args.max_rounds,
         turn_time_limit_seconds=turn_time_limit_seconds,
+        planning_time_limit_seconds=planning_time_limit_seconds,
         placement_time_limit_seconds=placement_time_limit_seconds,
-        placement_reasoning_effort=args.placement_reasoning_effort,
+        placement_reasoning_effort=placement_reasoning_effort,
         planning_reasoning_effort=planning_reasoning_effort,
         attack_reasoning_effort=attack_reasoning_effort,
         fortify_reasoning_effort=fortify_reasoning_effort,

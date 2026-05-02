@@ -132,6 +132,7 @@ def build_summary(game, game_index: int, game_folder: str, elapsed_seconds: floa
             "key_areas": game.rules.key_areas,
             "max_rounds": game.rules.max_rounds,
             "turn_time_limit_seconds": game.rules.turn_time_limit_seconds,
+            "planning_time_limit_seconds": game.rules.planning_time_limit_seconds,
             "placement_time_limit_seconds": game.rules.placement_time_limit_seconds,
             "placement_reasoning_effort": game.rules.placement_reasoning_effort,
             "planning_reasoning_effort": game.rules.planning_reasoning_effort,
@@ -182,6 +183,15 @@ def main() -> None:
         type=int,
         default=90,
         help="Hard per-turn wall-clock budget. If it expires, the turn is effectively forfeited.",
+    )
+    parser.add_argument(
+        "--planning-time-limit-seconds",
+        type=int,
+        default=None,
+        help=(
+            "Optional isolated wall-clock budget for the single pre-turn planning "
+            "prompt. This runs before the shared execution turn timer starts."
+        ),
     )
     parser.add_argument(
         "--placement-time-limit-seconds",
@@ -247,6 +257,7 @@ def main() -> None:
         capitals=False,
         max_rounds=args.max_rounds,
         turn_time_limit_seconds=args.turn_time_limit_seconds,
+        planning_time_limit_seconds=args.planning_time_limit_seconds,
         placement_time_limit_seconds=args.placement_time_limit_seconds,
         placement_reasoning_effort=args.placement_reasoning_effort,
         planning_reasoning_effort=planning_reasoning_effort,

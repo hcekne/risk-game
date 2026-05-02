@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Optional
 import pandas as pd
 
 from risk_game.paths import get_game_results_dir
+from risk_game.utils.turn_summary import build_llm_client_info
 
 
 
@@ -68,12 +69,11 @@ def build_game_manifest(
 ) -> Dict[str, object]:
     players = []
     for player in game_master.players:
-        llm_client = player.llm_client
         player_entry: Dict[str, object] = {
             "name": player.name,
-            "provider": getattr(llm_client, "provider_name", None),
-            "model": getattr(llm_client, "model_type", None),
+            **build_llm_client_info(player.llm_client),
             "turn_time_limit_seconds": player.turn_time_limit_seconds,
+            "planning_time_limit_seconds": player.planning_time_limit_seconds,
             "placement_time_limit_seconds": player.placement_time_limit_seconds,
             "placement_reasoning_effort": player.placement_reasoning_effort,
             "planning_reasoning_effort": player.planning_reasoning_effort,
@@ -81,16 +81,10 @@ def build_game_manifest(
             "fortify_reasoning_effort": player.fortify_reasoning_effort,
             "card_trade_reasoning_effort": player.card_trade_reasoning_effort,
         }
-        for optional_field in (
-            "reasoning_effort",
-            "verbosity",
-            "thinking_effort",
-            "thinking_budget",
-            "enable_thinking",
-            "include_thoughts",
-        ):
-            if hasattr(llm_client, optional_field):
-                player_entry[optional_field] = getattr(llm_client, optional_field)
+        if player.planning_llm_client is not None:
+            player_entry["planning_client"] = build_llm_client_info(
+                player.planning_llm_client
+            )
         players.append(player_entry)
 
     rules_snapshot = {
@@ -101,6 +95,7 @@ def build_game_manifest(
         "key_areas": list(game_master.rules.key_areas),
         "max_rounds": game_master.rules.max_rounds,
         "turn_time_limit_seconds": game_master.rules.turn_time_limit_seconds,
+        "planning_time_limit_seconds": game_master.rules.planning_time_limit_seconds,
         "placement_time_limit_seconds": game_master.rules.placement_time_limit_seconds,
         "placement_reasoning_effort": game_master.rules.placement_reasoning_effort,
         "planning_reasoning_effort": game_master.rules.planning_reasoning_effort,

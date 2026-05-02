@@ -276,6 +276,97 @@ class PlayerAgentTests(unittest.TestCase):
             ],
         )
 
+    def test_planning_prompt_uses_isolated_planning_timeout(self):
+        _, game_state, rules = make_game_state("Alice", "Bob", "Carol")
+        seed_full_board(game_state, ["Alice", "Bob", "Carol"])
+
+        client = RecordingLLMClient(
+            response="- Reinforce Alaska.\n- Attack Kamchatka if safe."
+        )
+        player = PlayerAgent("Alice", client)
+        player.planning_reasoning_effort = "high"
+        player.planning_time_limit_seconds = 60
+
+        player.define_strategy_for_move(rules, game_state)
+
+        decision_log = player.get_turn_decision_log()
+        self.assertEqual(decision_log[0]["phase"], "pre_turn_planning")
+        self.assertEqual(decision_log[0]["timeout_seconds"], 60)
+        self.assertEqual(decision_log[0]["reasoning_effort_override"], "high")
+
+    def test_planning_prompt_can_use_different_planning_client(self):
+        _, game_state, rules = make_game_state("Alice", "Bob", "Carol")
+        seed_full_board(game_state, ["Alice", "Bob", "Carol"])
+
+        class OptionsCapturingLLMClient(StubLLMClient):
+            def __init__(self, provider, model, responses):
+                super().__init__()
+                self.provider_name = provider
+                self.model_type = model
+                self.responses = list(responses)
+                self.recorded_kwargs = []
+
+            def get_chat_completion(self, messages, **kwargs) -> str:
+                self.recorded_kwargs.append(kwargs)
+                return self.responses.pop(0)
+
+        execution_client = OptionsCapturingLLMClient(
+            "OpenAI",
+            "gpt-5.4",
+            [
+                "Attack Opponent Territory:|||Kamchatka, 3|||\n"
+                "From Territory:###Alaska###\n"
+                "Reasoning:+++Best border attack.+++"
+            ],
+        )
+        execution_client.supports_reasoning = True
+        execution_client.supported_reasoning_efforts = lambda _: (
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+        )
+        planning_client = OptionsCapturingLLMClient(
+            "OpenAI",
+            "gpt-5.5",
+            ["- Reinforce Alaska.\n- Attack Kamchatka if safe."],
+        )
+        planning_client.supports_reasoning = True
+        planning_client.supported_reasoning_efforts = lambda _: (
+            "none",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+        )
+
+        player = PlayerAgent(
+            "Alice",
+            execution_client,
+            planning_llm_client=planning_client,
+        )
+        player.planning_reasoning_effort = "high"
+        player.attack_reasoning_effort = "medium"
+
+        player.define_strategy_for_move(rules, game_state)
+        player.make_attack_move(rules, game_state, successful_attacks=0)
+
+        decision_log = player.get_turn_decision_log()
+        self.assertEqual(decision_log[0]["provider"], "OpenAI")
+        self.assertEqual(decision_log[0]["model"], "gpt-5.5")
+        self.assertEqual(decision_log[0]["client_role"], "planning")
+        self.assertEqual(decision_log[1]["model"], "gpt-5.4")
+        self.assertEqual(decision_log[1]["client_role"], "primary")
+        self.assertEqual(
+            planning_client.recorded_kwargs,
+            [{"reasoning_effort": "high", "max_attempts_override": None}],
+        )
+        self.assertEqual(
+            execution_client.recorded_kwargs,
+            [{"reasoning_effort": "medium", "max_attempts_override": None}],
+        )
+
     def test_openai_non_reasoning_model_drops_reasoning_override(self):
         _, game_state, rules = make_game_state("Alice", "Bob", "Carol")
         seed_full_board(game_state, ["Alice", "Bob", "Carol"])

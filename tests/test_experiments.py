@@ -2,6 +2,7 @@ import pytest
 
 from risk_game.experiments import (
     build_live_turn_frontier_roster,
+    build_live_turn_frontier_strategic_roster,
     build_openai_generation_ladder,
     build_openai_mini_high_strategic_hybrid_arena,
     build_openai_mini_medium_vs_high_arena,
@@ -52,6 +53,50 @@ def test_build_live_turn_frontier_roster_allows_explicit_overrides():
     assert roster[0].reasoning_effort == "high"
     assert roster[1].enable_thinking is True
     assert roster[1].thinking_effort == "medium"
+
+
+def test_build_live_turn_frontier_strategic_roster_uses_high_planning_profile():
+    roster = build_live_turn_frontier_strategic_roster()
+
+    assert [agent.provider for agent in roster] == [
+        "OpenAI",
+        "Anthropic",
+        "Gemini",
+        "Moonshot",
+    ]
+    assert [agent.model for agent in roster] == [
+        "gpt-5.4",
+        "claude-opus-4-7",
+        "gemini-3.1-pro-preview",
+        "kimi-k2.6",
+    ]
+    assert roster[0].planning_provider == "OpenAI"
+    assert roster[0].planning_model == "gpt-5.5"
+    assert [agent.planning_time_limit_seconds for agent in roster] == [90, 90, 90, 90]
+    assert [agent.placement_reasoning_effort for agent in roster] == [
+        "medium",
+        "medium",
+        "medium",
+        "medium",
+    ]
+    assert [agent.planning_reasoning_effort for agent in roster] == [
+        "high",
+        "high",
+        "high",
+        "high",
+    ]
+    assert [agent.attack_reasoning_effort for agent in roster] == [
+        "medium",
+        "medium",
+        "medium",
+        "medium",
+    ]
+    assert roster[1].enable_thinking is True
+    assert roster[2].enable_thinking is True
+    assert roster[3].enable_thinking is False
+    assert roster[3].planning_provider == "Moonshot"
+    assert roster[3].planning_model == "kimi-k2.6"
+    assert roster[3].planning_enable_thinking is True
 
 
 def test_build_openai_generation_ladder_uses_expected_models():

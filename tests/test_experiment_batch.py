@@ -16,6 +16,7 @@ from risk_game.utils.experiment_batch import (
     load_agent_specs,
     resolve_phase_reasoning_effort,
     rotate_agent_specs,
+    run_agent_preflight,
 )
 
 
@@ -41,6 +42,8 @@ def test_load_agent_specs_reads_json_list(tmp_path: Path):
             "provider": "Moonshot",
             "model": "kimi-k2.6",
             "enable_thinking": False,
+            "planning_model": "kimi-k2.6",
+            "planning_enable_thinking": True,
         }
     ]
     path = tmp_path / "agent_specs.json"
@@ -52,6 +55,8 @@ def test_load_agent_specs_reads_json_list(tmp_path: Path):
     assert specs[0].provider == "Moonshot"
     assert specs[0].model == "kimi-k2.6"
     assert specs[0].enable_thinking is False
+    assert specs[0].planning_model == "kimi-k2.6"
+    assert specs[0].planning_enable_thinking is True
 
 
 def test_resolve_phase_reasoning_effort_caps_global_requests():
@@ -214,12 +219,15 @@ def test_series_manifest_and_combined_results_preserve_stage_order(tmp_path: Pat
 def test_game_master_applies_player_runtime_overrides():
     game = GameMaster(Rules(GameConfig()))
     dummy_llm = SimpleNamespace(provider_name="OpenAI", model_type="gpt-5.4-mini")
+    planning_llm = SimpleNamespace(provider_name="OpenAI", model_type="gpt-5.5")
 
     game.add_player(
         name="mini-high",
         llm_client=dummy_llm,
+        planning_llm_client=planning_llm,
         runtime_overrides={
             "turn_time_limit_seconds": 120,
+            "planning_time_limit_seconds": 60,
             "placement_time_limit_seconds": 25,
             "placement_reasoning_effort": "high",
             "planning_reasoning_effort": "high",
@@ -231,10 +239,52 @@ def test_game_master_applies_player_runtime_overrides():
 
     player = game.players[0]
 
+    assert player.planning_llm_client is planning_llm
     assert player.turn_time_limit_seconds == 120
+    assert player.planning_time_limit_seconds == 60
     assert player.placement_time_limit_seconds == 25
     assert player.placement_reasoning_effort == "high"
     assert player.planning_reasoning_effort == "high"
     assert player.attack_reasoning_effort == "high"
     assert player.fortify_reasoning_effort == "high"
     assert player.card_trade_reasoning_effort == "high"
+
+
+def test_run_agent_preflight_checks_primary_and_planning_clients(monkeypatch):
+    recorded_calls = []
+
+    class DummyClient:
+        def __init__(self, provider, model):
+            self.provider = provider
+            self.model = model
+
+        def get_chat_completion(self, *args, **kwargs):
+            return f"OK {self.provider} {self.model}"
+
+    def fake_create_llm_client(provider, model, **kwargs):
+        recorded_calls.append((provider, model, kwargs))
+        return DummyClient(provider, model)
+
+    monkeypatch.setattr(
+        "risk_game.utils.experiment_batch.create_llm_client",
+        fake_create_llm_client,
+    )
+
+    results = run_agent_preflight(
+        [
+            AgentSpec(
+                name="openai-split",
+                provider="OpenAI",
+                model="gpt-5.4",
+                planning_provider="OpenAI",
+                planning_model="gpt-5.5",
+            )
+        ],
+        timeout_seconds=5.0,
+    )
+
+    assert [call[:2] for call in recorded_calls] == [
+        ("OpenAI", "gpt-5.4"),
+        ("OpenAI", "gpt-5.5"),
+    ]
+    assert [result["client_role"] for result in results] == ["primary", "planning"]

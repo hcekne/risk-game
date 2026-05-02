@@ -9,6 +9,7 @@ class GameConfig:
                  key_areas: List[str] = None, 
                  max_rounds: int = 15,
                  turn_time_limit_seconds: int = 90,
+                 planning_time_limit_seconds: int | None = None,
                  placement_time_limit_seconds: int = 15,
                  placement_reasoning_effort: str = "low",
                  planning_reasoning_effort: str = "medium",
@@ -22,6 +23,7 @@ class GameConfig:
         self.key_areas = key_areas or []
         self.max_rounds = max_rounds
         self.turn_time_limit_seconds = turn_time_limit_seconds
+        self.planning_time_limit_seconds = planning_time_limit_seconds
         self.placement_time_limit_seconds = placement_time_limit_seconds
         self.placement_reasoning_effort = placement_reasoning_effort
         self.planning_reasoning_effort = planning_reasoning_effort
@@ -38,6 +40,7 @@ class GameConfig:
             "key_areas": self.key_areas,
             "max_rounds": self.max_rounds,
             "turn_time_limit_seconds": self.turn_time_limit_seconds,
+            "planning_time_limit_seconds": self.planning_time_limit_seconds,
             "placement_time_limit_seconds": self.placement_time_limit_seconds,
             "placement_reasoning_effort": self.placement_reasoning_effort,
             "planning_reasoning_effort": self.planning_reasoning_effort,

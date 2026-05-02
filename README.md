@@ -104,6 +104,7 @@ from risk_game.experiments import (
     AgentSpec,
     Experiment,
     build_live_turn_frontier_roster,
+    build_live_turn_frontier_strategic_roster,
 )
 from risk_game.game_config import GameConfig
 
@@ -119,6 +120,19 @@ experiment = Experiment(
 - Anthropic: `claude-opus-4-7` in standard mode (`enable_thinking=False`)
 - Google: `gemini-3.1-pro-preview`
 - Moonshot: `kimi-k2.6` with thinking disabled
+
+`build_live_turn_frontier_strategic_roster()` is the higher-ceiling cross-provider strategic preset:
+- OpenAI execution: `gpt-5.4` with `reasoning_effort="medium"`
+- OpenAI planning override: `gpt-5.5` on the isolated pre-turn planning phase
+- Anthropic: `claude-opus-4-7` with thinking enabled across phases, using the phase effort caps
+- Google: `gemini-3.1-pro-preview`, with planning `high` and execution phases `medium`
+- Moonshot: `kimi-k2.6`, with execution thinking disabled and planning-only thinking enabled via a planning override
+- phase profile: placement `medium`, planning `high`, attack `medium`, fortify `medium`, card trade `low`
+- isolated pre-turn planning timeout: `90s`
+
+For custom mixed-model rosters, `AgentSpec` also supports planning-only client overrides via the `planning_*` fields. That lets one provider/model handle the isolated planning prompt while a faster default client handles the repeated execution prompts.
+
+Use the locked `live_turn_frontier` preset when you want strict comparability to the historical synchronous smoke/championship condition. Use `live_turn_frontier_strategic` when you want the stronger "best effort under bounded deliberate planning" condition.
 
 Current core provider coverage:
 - OpenAI: `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.4-pro`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5-pro`, `gpt-5.1`, `gpt-5.2`, `gpt-5.2-pro`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-4o`, `gpt-4o-mini`, `o3`, `o3-mini`, `o3-pro`, `o4-mini`
@@ -335,6 +349,8 @@ docker compose exec -T risk-game python /app/scripts/run_experiment.py \
 Equivalent `make` wrapper:
 ```bash
 make run-experiment ARGS="--label frontier_smoke --preset live_turn_frontier --num-games 3"
+
+make run-experiment ARGS="--label frontier_strategic --preset live_turn_frontier_strategic --num-games 4"
 ```
 
 Status checks:
@@ -360,11 +376,13 @@ Current preset roster names:
 - `openai_mini_high_strategic_hybrid`
 - `openai_nano_reasoning`
 - `live_turn_frontier`
+- `live_turn_frontier_strategic`
 
 Preset timing note:
 - `openai_mini_reasoning` defaults to a more generous live budget of `120s` turn time and `25s` placement time unless you override those flags explicitly.
 - `openai_mini_medium_vs_high` defaults to `300s` turn time and `50s` placement time, because it is intended specifically as a recovery test for `gpt-5.4-mini-high` against `gpt-5.4-mini-medium`.
 - `openai_mini_high_strategic_hybrid` defaults to `300s` turn time and `25s` placement time, because it is intended to test `high` only on planning and attack while keeping placement, fortify, and card trade on `medium`.
+- `live_turn_frontier_strategic` keeps the normal `90s` execution turn timer and `15s` placement timer, adds an isolated `90s` pre-turn planning timeout, and by default lets OpenAI plan with `gpt-5.5` while `gpt-5.4` handles execution.
 - The preset varies reasoning across all game phases, including placement and card trade.
 - Placement prompts are now much more compact and explicitly framed as fast local decisions, so the experiment still measures reasoning differences without wasting the budget on giant setup prompts.
 - The default live-play prompt stack now matches the strongest probe architecture so far: `timed_risk_live` system prompt + compact execution prompts + attack-plan handoff. The heavier per-call `TIME BUDGET` and `FINAL CHECK` blocks are still available for probes, but they are no longer the default for scored play.
@@ -414,6 +432,7 @@ Standard live-play timing policy in this repo:
 - Initial placement and normal troop-placement prompts use a fast placement profile by default: `placement_reasoning_effort=low` and `placement_time_limit_seconds=15`.
 - The opening setup remains the original alternating single-troop placement flow. It is not bulk-compressed into one move per player.
 - Full turns use a hard `turn_time_limit_seconds=90` budget by default.
+- If `planning_time_limit_seconds` is set, the single pre-turn planning prompt runs before the shared execution turn timer starts.
 - If the turn timer expires, later strategic phases are skipped and the engine falls back quickly for any mandatory placement so the game continues.
 - The engine keeps a small internal safety buffer inside the turn budget so observed wall-clock stays close to the configured limit in live runs.
 - Long live runs now perform a cheap OpenAI preflight request before the league starts so quota/model-access failures are caught up front instead of halfway through a batch.

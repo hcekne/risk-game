@@ -1,6 +1,7 @@
 import random
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from risk_game.card_deck import Card
 import pytest
@@ -290,6 +291,72 @@ class GameMasterTests(unittest.TestCase):
         self.assertEqual(len(game_master.player_cards[alice.name]), 1)
         self.assertEqual(game_master.player_cards[alice.name][0].territory, "Peru")
 
+    def test_attack_console_output_includes_players_models_territories_and_troops(self):
+        game_master = make_game_master("Alice", "Bob")
+        alice = get_player(game_master.active_players, "Alice")
+        bob = get_player(game_master.active_players, "Bob")
+        alice.llm_client.provider_name = "OpenAI"
+        alice.llm_client.model_type = "gpt-5.4"
+        bob.llm_client.provider_name = "Anthropic"
+        bob.llm_client.model_type = "claude-opus-4-7"
+
+        set_territory_owner(game_master.game_state, "Argentina", "Alice", 6)
+        set_territory_owner(game_master.game_state, "Brazil", "Bob", 2)
+        set_territory_owner(game_master.game_state, "Peru", "Bob", 1)
+
+        attack_sequence = [
+            (
+                [{"territory_name": "Brazil", "num_troops": 5}],
+                "Take Brazil.",
+                "Argentina",
+            ),
+            (
+                [{"territory_name": "Blank", "num_troops": 0}],
+                "Stop attacking.",
+                "Blank",
+            ),
+        ]
+
+        with patch.object(
+            alice,
+            "make_attack_move",
+            side_effect=attack_sequence,
+        ), patch.object(
+            game_master.game_state,
+            "simulate_attack",
+            return_value=("attacker", 3),
+        ), patch.object(
+            game_master,
+            "is_game_over",
+            return_value=False,
+        ), patch("builtins.print") as mock_print:
+            successful_attacks, game_over = game_master.ensure_valid_attack_move(alice)
+
+        self.assertEqual(successful_attacks, 1)
+        self.assertFalse(game_over)
+
+        printed_lines = [
+            " ".join(str(arg) for arg in call.args)
+            for call in mock_print.call_args_list
+        ]
+        self.assertTrue(
+            any(
+                "ATTACK: Alice [OpenAI:gpt-5.4] attacks "
+                "Bob [Anthropic:claude-opus-4-7] | "
+                "Argentina (6) -> Brazil (2) | commits 5 troop(s)"
+                in line
+                for line in printed_lines
+            )
+        )
+        self.assertTrue(
+            any(
+                "ATTACK RESULT: Alice [OpenAI:gpt-5.4] captured Brazil from "
+                "Bob [Anthropic:claude-opus-4-7] | occupying troops: 3"
+                in line
+                for line in printed_lines
+            )
+        )
+
     def test_play_a_turn_skips_attack_and_fortify_after_turn_timeout(self):
         game_master = make_game_master("Alice", "Bob")
         alice = get_player(game_master.active_players, "Alice")
@@ -316,6 +383,81 @@ class GameMasterTests(unittest.TestCase):
 
         attack_phase.assert_not_called()
         fortify_phase.assert_not_called()
+
+    def test_play_a_turn_prints_phase_transition_lines(self):
+        game_master = make_game_master("Alice", "Bob")
+        alice = get_player(game_master.active_players, "Alice")
+        alice.llm_client.provider_name = "OpenAI"
+        alice.llm_client.model_type = "gpt-5.4"
+        alice.planning_llm_client = SimpleNamespace(
+            provider_name="OpenAI",
+            model_type="gpt-5.5",
+        )
+        alice.turn_time_limit_seconds = 90
+
+        def fake_define_strategy(*args, **kwargs):
+            alice.turn_strategy = "- Reinforce Alaska. - Attack Kamchatka if safe."
+
+        with patch.object(game_master, "_start_turn_trace"), patch.object(
+            game_master,
+            "_finalize_turn_trace",
+            return_value={"turn_number": 1},
+        ), patch.object(
+            alice,
+            "define_strategy_for_move",
+            side_effect=fake_define_strategy,
+        ), patch.object(
+            game_master,
+            "phase_1_troop_placement",
+        ), patch.object(
+            game_master,
+            "phase_2_attack",
+            return_value=2,
+        ), patch.object(
+            game_master,
+            "phase_3_fortify",
+        ), patch.object(
+            alice,
+            "remaining_turn_time_seconds",
+            side_effect=[88.4, 62.7, 40.1],
+        ), patch("builtins.print") as mock_print:
+            game_master.play_a_turn(alice, turn_number=1)
+
+        printed_lines = [
+            " ".join(str(arg) for arg in call.args)
+            for call in mock_print.call_args_list
+        ]
+        self.assertTrue(
+            any(
+                "completed planning mode via OpenAI:gpt-5.5" in line
+                and "starting execution turn timer (90s) and placement mode" in line
+                for line in printed_lines
+            )
+        )
+        self.assertTrue(
+            any(
+                "completed placement mode via OpenAI:gpt-5.4" in line
+                and "remaining execution time 88.4s" in line
+                and "starting attack mode" in line
+                for line in printed_lines
+            )
+        )
+        self.assertTrue(
+            any(
+                "completed attack mode via OpenAI:gpt-5.4" in line
+                and "remaining execution time 62.7s" in line
+                and "successful attacks 2" in line
+                and "starting fortify mode" in line
+                for line in printed_lines
+            )
+        )
+        self.assertTrue(
+            any(
+                "completed fortify mode via OpenAI:gpt-5.4" in line
+                and "remaining execution time 40.1s" in line
+                for line in printed_lines
+            )
+        )
 
 
 if __name__ == "__main__":

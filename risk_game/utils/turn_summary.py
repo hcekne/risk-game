@@ -5,18 +5,31 @@ from typing import Any, Dict, List
 from risk_game.game_constants import CONTINENT_BONUSES
 
 
-def build_player_model_info(player: "PlayerAgent") -> Dict[str, Any]:
-    llm_client = player.llm_client
+def build_llm_client_info(llm_client: object) -> Dict[str, Any]:
     info: Dict[str, Any] = {
-        "name": player.name,
         "provider": getattr(llm_client, "provider_name", None),
         "model": getattr(llm_client, "model_type", None),
     }
 
-    if hasattr(llm_client, "reasoning_effort"):
-        info["reasoning_effort"] = getattr(llm_client, "reasoning_effort")
-    if hasattr(llm_client, "verbosity"):
-        info["verbosity"] = getattr(llm_client, "verbosity")
+    for optional_field in (
+        "reasoning_effort",
+        "verbosity",
+        "thinking_effort",
+        "thinking_budget",
+        "enable_thinking",
+        "include_thoughts",
+        "use_responses_api",
+    ):
+        if hasattr(llm_client, optional_field):
+            info[optional_field] = getattr(llm_client, optional_field)
+
+    return info
+
+
+def build_player_model_info(player: "PlayerAgent") -> Dict[str, Any]:
+    info = {"name": player.name, **build_llm_client_info(player.llm_client)}
+    if player.planning_llm_client is not None:
+        info["planning_client"] = build_llm_client_info(player.planning_llm_client)
 
     return info
 
