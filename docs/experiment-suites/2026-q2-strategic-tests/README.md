@@ -51,11 +51,18 @@ Those folders are intentionally git-ignored. The tracked analysis note should al
 | Complete | OpenAI Mini Reasoning 2 | In a constrained synchronous live-turn environment, does `gpt-5.4-mini` perform differently at `none/low/medium/high` reasoning levels? | `/shared-game-results/experiments/experiment__2026-04-27_22-29-27__mini_reasoning_2` | [2026-04-27_openai-mini-reasoning.md](2026-04-27_openai-mini-reasoning.md) |
 | Complete | OpenAI Mini High-vs-Medium Recovery | If `high` is given more time, does it recover against `medium`? | `/shared-game-results/experiments/experiment__2026-04-28_14-57-43__mini_medium_vs_high_300s_16` | [2026-04-29_openai-mini-high-vs-medium-recovery.md](2026-04-29_openai-mini-high-vs-medium-recovery.md) |
 | Complete | Cross-Provider Frontier Smoke 1 | Does the locked cross-provider frontier roster complete a clean live-turn smoke game under shared timers and prompts? | `/shared-game-results/experiments/experiment__2026-04-29_20-44-02__frontier_championship_smoke_1` | local artifact only; detailed suite note pending |
+| Complete | Cross-Provider Frontier Smoke 2 | Under the standard `90s / 15s` live-turn policy, which frontier candidates remain operationally clean and which ones time out often enough to warrant roster changes? | `/shared-game-results/experiments/experiment__2026-05-01_09-03-34__frontier_smoke` | [2026-05-01_cross-provider-frontier-smoke.md](2026-05-01_cross-provider-frontier-smoke.md) |
+| Complete | Cross-Provider Frontier Strategic Smoke | Under the earlier `60s` isolated-planning strategic condition, do the frontier candidates remain operationally usable? | `/shared-game-results/experiments/experiment__2026-05-01_20-51-42__frontier_strategic_smoke` | [2026-05-02_cross-provider-frontier-strategic-smoke.md](2026-05-02_cross-provider-frontier-strategic-smoke.md) |
 | Planned | OpenAI Mini High-Strategic Hybrid | Does `high` help when reserved for planning/attack only, while faster settings handle administrative phases? | pending | [2026-04-29_openai-mini-high-strategic-hybrid-plan.md](2026-04-29_openai-mini-high-strategic-hybrid-plan.md) |
 | Planned | OpenAI Generation Ladder | `gpt-5.5` vs `gpt-5.4` vs `gpt-4.1` | pending | pending |
 | Planned | OpenAI Size Ladder | `gpt-5.4` vs `gpt-5.4-mini` vs `gpt-5.4-nano` | pending | pending |
+| Blocked | Cross-Provider Frontier Strategic Full 16 | Can the new strategic frontier condition complete a research-sized `16`-game batch? | `/shared-game-results/experiments/experiment__2026-05-01_21-52-42__frontier_strategic_full_16` | blocked at launch by Gemini daily quota exhaustion; see [2026-05-02_cross-provider-frontier-strategic-smoke.md](2026-05-02_cross-provider-frontier-strategic-smoke.md) |
 | Planned | Cross-Provider Championship | best live-turn-safe OpenAI vs Anthropic vs Gemini vs Kimi | pending | pending |
 | Planned | Open-vs-Closed Capability Anchoring | place Kimi against historical GPT tiers | pending | pending |
+
+Shared artifact audit on `2026-05-02`:
+- completed shared batches currently present: `mini_reasoning_2`, `mini_medium_vs_high_300s_16`, `frontier_smoke`, and `frontier_strategic_smoke`
+- no shared completed batches were found for `openai_generation_ladder`, `openai_size_ladder`, or `openai_mini_high_strategic_hybrid`
 
 ## Analyst Notes
 

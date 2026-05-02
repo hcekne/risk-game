@@ -146,6 +146,76 @@ Current exclusion from live turn play:
 
 This is a practical experiment-policy decision, not a universal quality judgment about the models.
 
+### 2026-05-01 frontier smoke reinforced the case against `gpt-5.5` under the standard live policy
+
+The newer cross-provider frontier smoke run under the normal shared live policy:
+- `90s` execution turn timer
+- `15s` placement timer
+- placement `low`
+- planning `medium`
+- attack `medium`
+- fortify `medium`
+- card trade `low`
+
+produced a sharper operational result than the earlier prompt-smoke probes alone.
+
+Observed from the saved batch:
+- `claude-opus-4-7`: `0` fallback calls
+- `gemini-3.1-pro-preview`: `0` fallback calls
+- `kimi-k2.6`: `0` fallback calls
+- `gpt-5.5`: `4` fallback/error calls and `4` timed-out turns
+
+Phase-level decision-time aggregate from that batch:
+- `claude-opus-4-7`: about `3.03s` mean LLM call time
+- `gemini-3.1-pro-preview`: about `4.68s`
+- `kimi-k2.6`: about `3.27s`
+- `gpt-5.5`: about `7.64s`
+
+Interpretation:
+- `gpt-5.5` still produced strategically legible plans
+- the problem was not gross strategic confusion
+- the problem was repeated wall-clock stress inside a synchronous turn loop
+- end-of-turn attack and fortify calls were the main failure points
+
+This matters because the repo's research question is not "which model sounds smartest in a single offline prompt". It is "which models can play well inside a bounded synchronous multi-call game loop".
+
+Decision:
+- do not treat `gpt-5.5` as the default OpenAI frontier representative for future cross-provider live-turn tournaments under the standard `90s / 15s` policy
+- treat `gpt-5.4-medium` as the current best OpenAI default candidate for that specific deployment condition unless later tracked artifacts overturn it
+
+Evidence:
+- [2026-05-01_cross-provider-frontier-smoke.md](experiment-suites/2026-q2-strategic-tests/2026-05-01_cross-provider-frontier-smoke.md)
+
+### Separate planning time is now an explicit experimental condition
+
+The engine now supports an isolated pre-turn planning timeout via `planning_time_limit_seconds`.
+
+Behavior:
+- pre-turn planning can run under its own hard timeout
+- that planning prompt now happens before the shared execution turn timer starts
+- placement, attack, fortify, and card trade still share the normal execution timer
+
+Why this matters:
+- it lets us test a different research condition: "best strategic live play with bounded deliberate planning" rather than only "best low-latency fully synchronous play"
+- it separates planning-quality questions from repeated in-turn action-latency questions
+
+Related change:
+- the repo now has a `live_turn_frontier_strategic` preset that:
+  - uses `gpt-5.4` as the OpenAI execution model
+  - uses `gpt-5.5` as an OpenAI planning-only override for the isolated pre-turn planning prompt
+  - keeps Gemini on `gemini-3.1-pro-preview` with `high` planning and `medium` execution phases
+  - keeps Kimi execution thinking disabled, but enables Kimi thinking on the isolated planning prompt only
+  - gives planning an isolated `90s` timeout by default
+  - uses `medium` placement / attack / fortify
+  - uses `high` planning
+  - enables provider thinking where supported
+
+The engine also now supports planning-only client overrides at the `AgentSpec` layer. This means one provider/model can answer the isolated planning prompt while a different default client handles the repeated execution prompts in the same turn.
+
+Methodological caution:
+- results from `live_turn_frontier_strategic` are not directly comparable to the strict historical `live_turn_frontier` smoke runs
+- the planning budget is a real condition change, not just a prompt tweak
+
 ## Experiments We Can Run Now
 
 These are sensible near-term experiments with the current repo state.
@@ -496,3 +566,53 @@ This is an engineering workflow decision, but it also matters methodologically:
 
 The tracked folder structure for these runs now lives under:
 - `game_results/experiments/`
+
+### 2026-05-02 shared artifact audit clarified what is actually complete
+
+On `2026-05-02`, we audited the shared experiment store rather than relying on memory from prior machines or chats.
+
+Completed shared batches currently present:
+- `mini_reasoning_2`
+- `mini_medium_vs_high_300s_16`
+- `frontier_smoke`
+- `frontier_strategic_smoke`
+
+Not found in the shared completed artifacts:
+- `openai_generation_ladder`
+- `openai_size_ladder`
+- `openai_mini_high_strategic_hybrid`
+
+Why this matters:
+- future planning should treat those three runs as still pending unless their artifacts are restored from another machine
+- we should not talk ourselves into conclusions that are not backed by the shared experiment store
+
+### 2026-05-02 completed-batch interpretation
+
+The completed shared runs support the following working conclusions:
+
+- `gpt-5.4-mini-medium` is the best current live-turn setting on the mini line
+- `gpt-5.4-mini-low` is the best efficiency fallback on the mini line
+- `gpt-5.4-mini-high` is not justified for synchronous scored play even when given much more time
+- `gpt-5.5-medium` is too slow for the strict cross-provider `90s / 15s` frontier condition
+- `gpt-5.4-medium`, not `gpt-5.5-medium`, is the current OpenAI default for strict synchronous cross-provider live play
+
+Strategic-frontier caveat:
+- the completed `frontier_strategic_smoke` batch was an engineering pilot, not a clean research result
+- that run used the earlier `60s` isolated planning budget
+- `kimi-k2.6` repeatedly timed out in planning at `60s`
+- `gemini-3.1-pro-preview` later hit daily-quota `429` failures mid-game, which contaminated the aggregate Gemini metrics
+
+Operational consequence:
+- treat the strategic pilot as architecture/debugging evidence, not as a publishable provider ranking
+- keep the later move to `90s` isolated planning for the strategic preset
+
+### 2026-05-02 strategic full-batch block
+
+The first full `16`-game strategic frontier attempt failed immediately at `0 / 16` games because Gemini daily quota was exhausted.
+
+Artifact:
+- `/shared-game-results/experiments/experiment__2026-05-01_21-52-42__frontier_strategic_full_16`
+
+Interpretation:
+- this was a provider quota/infrastructure block, not a meaningful experimental outcome
+- do not count that folder as a completed cross-provider strategic comparison
