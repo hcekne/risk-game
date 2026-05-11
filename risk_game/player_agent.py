@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Callable, Dict, Optional, List, Tuple
 from risk_game.llm_clients.llm_base import LLMClient
 from risk_game.game_constants import TERRITORIES
+from risk_game.utils.provider_pause import detect_provider_pause_signal
 
 
 _TERRITORY_NAME_LOOKUP = {
@@ -31,6 +32,7 @@ def _llm_call_worker(
     response_queue: multiprocessing.Queue,
 ) -> None:
     try:
+        llm_client.clear_last_response_metadata()
         if request_kwargs:
             try:
                 response = llm_client.get_chat_completion(message_content, **request_kwargs)
@@ -38,7 +40,7 @@ def _llm_call_worker(
                 response = llm_client.get_chat_completion(message_content)
         else:
             response = llm_client.get_chat_completion(message_content)
-        response_queue.put(("ok", response))
+        response_queue.put(("ok", response, llm_client.get_last_response_metadata()))
     except Exception as exc:
         response_queue.put(("error", type(exc).__name__, str(exc)))
 
@@ -85,6 +87,7 @@ class PlayerAgent:
         self.prompt_include_time_budget: bool = False
         self.prompt_repeat_key_points: bool = False
         self.prompt_use_attack_plan_handoff: bool = True
+        self.provider_pause_handler: Optional[Callable[[Dict[str, object]], None]] = None
 
     def __str__(self) -> str:
         return (f"Player: {self.name}\n"
@@ -99,11 +102,13 @@ class PlayerAgent:
         **kwargs,
     ) -> str:
         active_client = self.llm_client if llm_client is None else llm_client
+        active_client.clear_last_response_metadata()
         if kwargs:
             try:
                 return active_client.get_chat_completion(message_content, **kwargs)
             except TypeError:
                 pass
+        active_client.clear_last_response_metadata()
         return active_client.get_chat_completion(message_content)
 
     def _call_llm_with_timeout(
@@ -115,6 +120,7 @@ class PlayerAgent:
         **kwargs,
     ) -> str:
         active_client = self.llm_client if llm_client is None else llm_client
+        active_client.clear_last_response_metadata()
         if timeout_seconds is None:
             return self.send_message(message_content, llm_client=active_client, **kwargs)
         if timeout_seconds <= 0:
@@ -142,7 +148,9 @@ class PlayerAgent:
             if not response_queue.empty():
                 status, *payload = response_queue.get()
                 if status == "ok":
-                    return payload[0]
+                    response, metadata = payload
+                    active_client.set_last_response_metadata(metadata)
+                    return response
                 error_name, error_message = payload
                 raise RuntimeError(f"{error_name}: {error_message}")
             raise RuntimeError("LLM worker exited without returning a response.")
@@ -181,6 +189,12 @@ class PlayerAgent:
     ) -> None:
         self.llm_interaction_logger = logger
 
+    def configure_provider_pause_handler(
+        self,
+        handler: Optional[Callable[[Dict[str, object]], None]],
+    ) -> None:
+        self.provider_pause_handler = handler
+
     def set_interaction_context(
         self,
         *,
@@ -205,6 +219,7 @@ class PlayerAgent:
         timeout_seconds: Optional[float],
         decision_time_seconds: float,
         reasoning_effort_override: Optional[str],
+        response_metadata: Optional[Dict[str, object]] = None,
         requested_timeout_seconds: Optional[float] = None,
         remaining_turn_time_seconds: Optional[float] = None,
         usable_turn_time_seconds: Optional[float] = None,
@@ -212,6 +227,9 @@ class PlayerAgent:
         error_type = None
         if error:
             error_type = error.split(":", 1)[0]
+        usage = None
+        if response_metadata is not None:
+            usage = response_metadata.get("usage")
 
         decision_entry = {
             "interaction_index": None,
@@ -232,6 +250,7 @@ class PlayerAgent:
             "usable_turn_time_seconds": usable_turn_time_seconds,
             "decision_time_seconds": decision_time_seconds,
             "reasoning_effort_override": reasoning_effort_override,
+            "usage": usage,
         }
         self.turn_decision_log.append(decision_entry)
 
@@ -270,6 +289,8 @@ class PlayerAgent:
                     "decision_time_seconds": decision_time_seconds,
                     "error": error,
                     "error_type": error_type,
+                    "usage": usage,
+                    "metadata": response_metadata,
                 },
             }
             try:
@@ -278,6 +299,63 @@ class PlayerAgent:
                 print(f"Warning: failed to write LLM interaction log: {exc}")
 
         return response
+
+    def _record_provider_pause_interaction(
+        self,
+        *,
+        phase: str,
+        prompt: str,
+        llm_client: LLMClient,
+        client_role: str,
+        error: str,
+        timeout_seconds: Optional[float],
+        requested_timeout_seconds: Optional[float],
+        remaining_turn_time_seconds: Optional[float],
+        usable_turn_time_seconds: Optional[float],
+        reasoning_effort_override: Optional[str],
+    ) -> None:
+        if self.llm_interaction_logger is None:
+            return
+
+        self._interaction_sequence += 1
+        interaction_entry = {
+            "logged_at_utc": (
+                datetime.now(timezone.utc)
+                .replace(microsecond=0)
+                .isoformat()
+                .replace("+00:00", "Z")
+            ),
+            "interaction_index": self._interaction_sequence,
+            "entry_type": "provider_pause_error",
+            "player": self.name,
+            "provider": getattr(llm_client, "provider_name", "unknown"),
+            "model": getattr(llm_client, "model_type", "unknown"),
+            "client_role": client_role,
+            "scope": self.current_interaction_scope,
+            "game_round": self.current_game_round,
+            "turn_number": self.current_turn_number,
+            "phase": phase,
+            "request": {
+                "prompt": prompt,
+                "prompt_length": len(prompt),
+                "reasoning_effort_override": reasoning_effort_override,
+                "timeout_seconds": timeout_seconds,
+                "requested_timeout_seconds": requested_timeout_seconds,
+                "remaining_turn_time_seconds": remaining_turn_time_seconds,
+                "usable_turn_time_seconds": usable_turn_time_seconds,
+            },
+            "response": {
+                "raw_response": "",
+                "response_length": 0,
+                "used_fallback_response": False,
+                "error": error,
+                "error_type": error.split(":", 1)[0] if error else None,
+                "decision_time_seconds": 0.0,
+                "usage": None,
+                "metadata": None,
+            },
+        }
+        self.llm_interaction_logger(interaction_entry)
 
     def _format_seconds_with_milliseconds(
         self, seconds: Optional[float]
@@ -650,34 +728,70 @@ class PlayerAgent:
                     reasoning_effort_override=resolved_reasoning_effort,
                 )
 
-        try:
-            if os.getenv("RISK_DEBUG_TIMING") == "1":
-                print(
-                    f"[TIMING] {self.name} phase={phase} "
-                    f"timeout={effective_timeout} requested_reasoning={reasoning_effort} "
-                    f"resolved_reasoning={resolved_reasoning_effort}"
+        while True:
+            try:
+                if os.getenv("RISK_DEBUG_TIMING") == "1":
+                    print(
+                        f"[TIMING] {self.name} phase={phase} "
+                        f"timeout={effective_timeout} requested_reasoning={reasoning_effort} "
+                        f"resolved_reasoning={resolved_reasoning_effort}"
+                    )
+                response = self._call_llm_with_timeout(
+                    prompt,
+                    llm_client=active_client,
+                    timeout_seconds=effective_timeout,
+                    reasoning_effort=resolved_reasoning_effort,
+                    max_attempts_override=1 if effective_timeout is not None else None,
                 )
-            response = self._call_llm_with_timeout(
-                prompt,
-                llm_client=active_client,
-                timeout_seconds=effective_timeout,
-                reasoning_effort=resolved_reasoning_effort,
-                max_attempts_override=1 if effective_timeout is not None else None,
-            )
-        except Exception as exc:
-            used_fallback_response = True
-            error = str(exc)[:1200]
-            if isinstance(exc, TimeoutError) and timeout_derived_from_turn_budget:
-                self.turn_time_exhausted = True
-            if (
-                self.turn_deadline is not None
-                and self.remaining_turn_time_seconds() is not None
-                and self.remaining_turn_time_seconds() <= 0
-            ):
-                self.turn_time_exhausted = True
-            if fallback_response is None:
-                fallback_response = self._default_fallback_response(phase)
-            response = fallback_response
+                response_metadata = active_client.get_last_response_metadata()
+                break
+            except Exception as exc:
+                error = str(exc)[:1200]
+                response_metadata = None
+                pause_signal = detect_provider_pause_signal(error)
+                if pause_signal is not None and self.provider_pause_handler is not None:
+                    self._record_provider_pause_interaction(
+                        phase=phase,
+                        prompt=prompt,
+                        llm_client=active_client,
+                        client_role=client_role,
+                        error=error,
+                        timeout_seconds=effective_timeout,
+                        requested_timeout_seconds=timeout_seconds,
+                        remaining_turn_time_seconds=remaining_turn_time,
+                        usable_turn_time_seconds=usable_turn_time,
+                        reasoning_effort_override=resolved_reasoning_effort,
+                    )
+                    self.provider_pause_handler(
+                        {
+                            "signal": pause_signal,
+                            "provider": getattr(active_client, "provider_name", "unknown"),
+                            "model": getattr(active_client, "model_type", "unknown"),
+                            "player_name": self.name,
+                            "phase": phase,
+                            "client_role": client_role,
+                            "scope": self.current_interaction_scope,
+                            "error": error,
+                        }
+                    )
+                    error = None
+                    started_at = time.time()
+                    continue
+                used_fallback_response = True
+                if isinstance(exc, TimeoutError) and timeout_derived_from_turn_budget:
+                    self.turn_time_exhausted = True
+                if (
+                    self.turn_deadline is not None
+                    and self.remaining_turn_time_seconds() is not None
+                    and self.remaining_turn_time_seconds() <= 0
+                ):
+                    self.turn_time_exhausted = True
+                if fallback_response is None:
+                    fallback_response = self._default_fallback_response(phase)
+                response = fallback_response
+                break
+        if used_fallback_response:
+            response_metadata = None
         decision_time_seconds = round(time.time() - started_at, 3)
         if os.getenv("RISK_DEBUG_TIMING") == "1":
             print(
@@ -698,6 +812,7 @@ class PlayerAgent:
             usable_turn_time_seconds=usable_turn_time,
             decision_time_seconds=decision_time_seconds,
             reasoning_effort_override=resolved_reasoning_effort,
+            response_metadata=response_metadata,
         )
 
     def _format_error_feedback(self, error_msg: Optional[str]) -> str:
@@ -715,7 +830,10 @@ class PlayerAgent:
         return response
 
     def parse_response_text(
-        self, move_response: object
+        self,
+        move_response: object,
+        *,
+        single_move_only: bool = False,
     ) -> Tuple[List[Dict[str, int]], Optional[str], Optional[str]]:
         response = move_response.strip()
         # print(f"Response content: {response}")
@@ -734,6 +852,8 @@ class PlayerAgent:
         # print(f"from_territory_match: {from_territory_match}")  # Debugging print
 
         if move_matches:
+            if single_move_only:
+                move_matches = [move_matches[-1]]
             for match in move_matches:
                 territory_name = match[0].strip()
                 num_troops = int(match[1].strip())
@@ -899,7 +1019,9 @@ RESPONSE RULES:
                     prompt,
                     reasoning_effort=self.placement_reasoning_effort,
                     timeout_seconds=self.placement_time_limit_seconds,
-                ))
+                ),
+                single_move_only=True,
+            )
         )
         return parsed_response
 
@@ -1064,7 +1186,9 @@ RESPONSE RULES:
                     "fortify",
                     prompt,
                     reasoning_effort=self.fortify_reasoning_effort,
-                ))
+                ),
+                single_move_only=True,
+            )
         )
 
         return parsed_response
@@ -1175,7 +1299,9 @@ RESPONSE RULES:
                     "attack",
                     prompt,
                     reasoning_effort=self.attack_reasoning_effort,
-                ))
+                ),
+                single_move_only=True,
+            )
         )
 
         return parsed_response

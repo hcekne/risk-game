@@ -65,7 +65,7 @@ def test_build_live_turn_frontier_strategic_roster_uses_high_planning_profile():
         "Moonshot",
     ]
     assert [agent.model for agent in roster] == [
-        "gpt-5.4",
+        "gpt-5.1",
         "claude-opus-4-7",
         "gemini-3.1-pro-preview",
         "kimi-k2.6",

@@ -90,6 +90,12 @@ make down
 - If a command fails on the host because dependencies are missing, switch to the container workflow instead of installing ad hoc packages locally.
 - Never print, commit, or rewrite `.env` secrets unless the user explicitly asks for credential work.
 
+## Behavioral Constraints
+- Think before coding. If something is ambiguous, ask or surface the ambiguity explicitly. Do not silently choose one interpretation and run with it.
+- Simplicity first. Write the minimum code needed to solve the stated problem. Avoid speculative abstractions and flexibility that was not requested.
+- Surgical changes. Touch only what the task requires. Do not refactor neighboring code or improve unrelated areas unless the task makes that necessary.
+- Goal-driven execution. Translate vague requests into concrete, verifiable targets before editing code. For example, "add validation" should become "write tests for invalid inputs, then make them pass."
+
 ## Long-Running Game And Experiment Runs
 - If the user asks you to run live games, experiments, leagues, or multi-game comparisons, let the full requested batch finish before closing out the task.
 - Do not stop early just because a single game is slow, produces no intermediate output, or requires long model calls.

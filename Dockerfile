@@ -8,7 +8,16 @@ RUN apt-get update && \
 	make \
 	sudo \
 	rclone \
-	ca-certificates && \
+	ca-certificates \
+	latexmk \
+	texlive-latex-base \
+	texlive-latex-recommended \
+	texlive-latex-extra \
+	texlive-fonts-recommended \
+	texlive-pictures \
+	poppler-utils \
+	tesseract-ocr \
+	ghostscript && \
 	rm -rf /var/lib/apt/lists/*
 
 # Set the working directory

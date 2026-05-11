@@ -1,0 +1,30 @@
+{
+  "fig01_provider_fullstack_wins": {
+    "png": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig01_provider_fullstack_wins.png",
+    "pdf": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig01_provider_fullstack_wins.pdf"
+  },
+  "fig02_kimi_anchor_comparison": {
+    "png": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig02_kimi_anchor_comparison.png",
+    "pdf": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig02_kimi_anchor_comparison.pdf"
+  },
+  "fig03_gemini_cost_gate": {
+    "png": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig03_gemini_cost_gate.png",
+    "pdf": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig03_gemini_cost_gate.pdf"
+  },
+  "fig04_planner_compression": {
+    "png": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig04_planner_compression.png",
+    "pdf": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig04_planner_compression.pdf"
+  },
+  "fig05_goal_directedness": {
+    "png": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig05_goal_directedness.png",
+    "pdf": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig05_goal_directedness.pdf"
+  },
+  "fig06_execution_chain_distribution": {
+    "png": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig06_execution_chain_distribution.png",
+    "pdf": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig06_execution_chain_distribution.pdf"
+  },
+  "fig07_execution_profile_heatmap": {
+    "png": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig07_execution_profile_heatmap.png",
+    "pdf": "/app/docs/article-plans/assets/2026-05-10_live-agent-risk/fig07_execution_profile_heatmap.pdf"
+  }
+}

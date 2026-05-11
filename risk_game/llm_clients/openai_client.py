@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from openai import (
     APIConnectionError,
@@ -302,6 +302,38 @@ class OpenAIClient(LLMClient):
             config=self.model_config,
         )
 
+    def _standardize_usage_from_responses_api(
+        self,
+        usage_payload: Optional[Dict[str, Any]],
+    ) -> Optional[Dict[str, Optional[int]]]:
+        if not usage_payload:
+            return None
+        input_details = usage_payload.get("input_tokens_details") or {}
+        output_details = usage_payload.get("output_tokens_details") or {}
+        return {
+            "input_tokens": usage_payload.get("input_tokens"),
+            "output_tokens": usage_payload.get("output_tokens"),
+            "total_tokens": usage_payload.get("total_tokens"),
+            "cached_input_tokens": input_details.get("cached_tokens"),
+            "reasoning_tokens": output_details.get("reasoning_tokens"),
+        }
+
+    def _standardize_usage_from_chat_completions(
+        self,
+        usage_payload: Optional[Dict[str, Any]],
+    ) -> Optional[Dict[str, Optional[int]]]:
+        if not usage_payload:
+            return None
+        prompt_details = usage_payload.get("prompt_tokens_details") or {}
+        completion_details = usage_payload.get("completion_tokens_details") or {}
+        return {
+            "input_tokens": usage_payload.get("prompt_tokens"),
+            "output_tokens": usage_payload.get("completion_tokens"),
+            "total_tokens": usage_payload.get("total_tokens"),
+            "cached_input_tokens": prompt_details.get("cached_tokens"),
+            "reasoning_tokens": completion_details.get("reasoning_tokens"),
+        }
+
     def get_chat_completion(
         self,
         message_content,
@@ -359,6 +391,18 @@ class OpenAIClient(LLMClient):
                     params["text"] = {"verbosity": self.verbosity}
 
                 response = client.responses.create(**params)
+                raw_usage = (
+                    response.usage.model_dump()
+                    if getattr(response, "usage", None) is not None
+                    else None
+                )
+                self.set_last_response_metadata(
+                    {
+                        "api_variant": "responses",
+                        "usage": self._standardize_usage_from_responses_api(raw_usage),
+                        "raw_usage": raw_usage,
+                    }
+                )
                 return response.output_text
 
             except (APITimeoutError, APIConnectionError) as e:
@@ -425,6 +469,20 @@ class OpenAIClient(LLMClient):
                     model=self.model_type,
                     messages=messages,
                     temperature=0,
+                )
+                raw_usage = (
+                    response.usage.model_dump()
+                    if getattr(response, "usage", None) is not None
+                    else None
+                )
+                self.set_last_response_metadata(
+                    {
+                        "api_variant": "chat_completions",
+                        "usage": self._standardize_usage_from_chat_completions(
+                            raw_usage
+                        ),
+                        "raw_usage": raw_usage,
+                    }
                 )
                 return response.choices[0].message.content
             except (APITimeoutError, APIConnectionError) as e:

@@ -1,4 +1,5 @@
-from typing import List, Dict, Optional
+from copy import deepcopy
+from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
 from risk_game.llm_clients.system_prompts import (
     DEFAULT_SYSTEM_PROMPT_PROFILE,
@@ -19,11 +20,26 @@ class LLMClient(ABC):
             profile=system_prompt_profile,
             override=system_prompt_override,
         )
+        self.last_response_metadata: Optional[Dict[str, Any]] = None
 
 
     @abstractmethod
     def get_chat_completion(self, messages: List[Dict[str, str]]) -> str:
         pass
+
+    def clear_last_response_metadata(self) -> None:
+        self.last_response_metadata = None
+
+    def set_last_response_metadata(
+        self,
+        metadata: Optional[Dict[str, Any]],
+    ) -> None:
+        self.last_response_metadata = (
+            deepcopy(metadata) if metadata is not None else None
+        )
+
+    def get_last_response_metadata(self) -> Optional[Dict[str, Any]]:
+        return deepcopy(self.last_response_metadata)
 
     def set_system_prompt_profile(self, profile: str) -> None:
         self.system_prompt_profile = profile
@@ -39,4 +55,3 @@ class LLMClient(ABC):
     def __repr__(self) -> str:
         return (f"<LLMClient(provider='{self.provider_name}', " +
                 f"model='{self.model_type}')>")
-

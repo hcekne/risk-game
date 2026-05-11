@@ -786,6 +786,14 @@ class GameMaster:
         moves: List[Dict[str, int]], 
         reasoning: Optional[str] = None
     ) -> Tuple[bool, Optional[str]]:
+        if len(moves) != 1:
+            error_msg = (
+                "Error: Initial troop placement must contain exactly one move "
+                f"but parsed {len(moves)}."
+            )
+            player.return_formatting_errors += 1
+            print(error_msg)
+            return False, error_msg
 
         territory = moves[0].get('territory_name')
         num_troops = moves[0].get('num_troops')

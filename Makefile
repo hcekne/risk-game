@@ -15,7 +15,7 @@ export GAME_RESULTS_HOST_PATH
 
 ARGS ?=
 
-.PHONY: up shell test test-regression test-live test-live-canary test-live-canary-openai test-live-canary-gemini test-live-canary-moonshot run-example run-experiment experiment-status experiment-summary experiment-series-summary logs down
+.PHONY: up shell test test-regression test-live test-live-canary test-live-canary-openai test-live-canary-gemini test-live-canary-moonshot run-example run-experiment experiment-status experiment-summary experiment-series-summary build-manuscript ocr-manuscript logs down
 
 ifeq ($(IN_CONTAINER),1)
 RUN_IN_SERVICE :=
@@ -74,6 +74,12 @@ experiment-summary:
 
 experiment-series-summary:
 	$(RUN_IN_SERVICE) python scripts/experiment_series_summary.py $(ARGS)
+
+build-manuscript:
+	$(RUN_IN_SERVICE) bash -lc 'export MPLCONFIGDIR=/tmp/matplotlib && python scripts/build_live_agent_risk_article_figures.py && python scripts/build_live_agent_risk_manuscript_pdf.py && bash scripts/build_live_agent_risk_latex.sh'
+
+ocr-manuscript:
+	$(RUN_IN_SERVICE) bash scripts/ocr_check_live_agent_risk_pdf.sh
 
 logs:
 ifeq ($(IN_CONTAINER),1)

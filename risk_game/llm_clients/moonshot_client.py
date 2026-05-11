@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from openai import (
     APIConnectionError,
@@ -102,6 +102,22 @@ class MoonshotClient(LLMClient):
 
         return self.LEGACY_MODEL_NUMBERS[model_number]
 
+    def _standardize_usage(
+        self,
+        usage_payload: Optional[Dict[str, Any]],
+    ) -> Optional[Dict[str, Optional[int]]]:
+        if not usage_payload:
+            return None
+        prompt_details = usage_payload.get("prompt_tokens_details") or {}
+        completion_details = usage_payload.get("completion_tokens_details") or {}
+        return {
+            "input_tokens": usage_payload.get("prompt_tokens"),
+            "output_tokens": usage_payload.get("completion_tokens"),
+            "total_tokens": usage_payload.get("total_tokens"),
+            "cached_input_tokens": prompt_details.get("cached_tokens"),
+            "reasoning_tokens": completion_details.get("reasoning_tokens"),
+        }
+
     def get_chat_completion(
         self,
         message_content,
@@ -143,6 +159,18 @@ class MoonshotClient(LLMClient):
                             "type": "enabled" if self.enable_thinking else "disabled"
                         }
                     },
+                )
+                raw_usage = (
+                    response.usage.model_dump()
+                    if getattr(response, "usage", None) is not None
+                    else None
+                )
+                self.set_last_response_metadata(
+                    {
+                        "api_variant": "chat_completions",
+                        "usage": self._standardize_usage(raw_usage),
+                        "raw_usage": raw_usage,
+                    }
                 )
                 content = response.choices[0].message.content
                 if not content:

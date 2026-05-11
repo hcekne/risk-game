@@ -62,6 +62,8 @@ Preferred commands:
 make up
 make shell
 make test
+make build-manuscript
+make ocr-manuscript
 make test-live
 make test-live-canary
 make test-live-canary-gemini
@@ -122,7 +124,7 @@ experiment = Experiment(
 - Moonshot: `kimi-k2.6` with thinking disabled
 
 `build_live_turn_frontier_strategic_roster()` is the higher-ceiling cross-provider strategic preset:
-- OpenAI execution: `gpt-5.4` with `reasoning_effort="medium"`
+- OpenAI execution: `gpt-5.1` with `reasoning_effort="medium"`
 - OpenAI planning override: `gpt-5.5` on the isolated pre-turn planning phase
 - Anthropic: `claude-opus-4-7` with thinking enabled across phases, using the phase effort caps
 - Google: `gemini-3.1-pro-preview`, with planning `high` and execution phases `medium`
@@ -218,6 +220,24 @@ For provider canaries, run:
 ```bash
 make test-live-canary
 ```
+
+## Building The Manuscript
+The container now includes a LaTeX/OCR toolchain for the live-agent Risk manuscript.
+
+Build the figures plus both PDF variants inside the container:
+```bash
+make build-manuscript
+```
+
+Run the OCR sanity check on the LaTeX PDF:
+```bash
+make ocr-manuscript
+```
+
+Primary manuscript artifacts:
+- `docs/article-plans/2026-05-10_live-agent-risk-manuscript.tex`
+- `docs/article-plans/2026-05-10_live-agent-risk-manuscript.pdf`
+- `docs/article-plans/2026-05-10_live-agent-risk-manuscript-latex.pdf`
 
 That runs the tiny positive paid checks for OpenAI, Gemini, and Moonshot. Provider-specific commands are also available:
 ```bash
@@ -351,6 +371,9 @@ Equivalent `make` wrapper:
 make run-experiment ARGS="--label frontier_smoke --preset live_turn_frontier --num-games 3"
 
 make run-experiment ARGS="--label frontier_strategic --preset live_turn_frontier_strategic --num-games 4"
+
+nl -ba scripts/experiment_commands.sh
+bash scripts/run_listed_experiment.sh 4
 ```
 
 Status checks:
@@ -368,6 +391,11 @@ The runner writes one experiment folder under the runtime `game_results/experime
 - `preflight_results.json`
 - one `game__...` folder per completed game
 
+Scored experiment benchmark:
+- the primary benchmark is wins under the configured victory rule
+- in the standard live experiments, that means winning by reaching the `65%` territory-control threshold
+- final territory totals are still useful for diagnostics, but they are not the main success criterion
+
 Current preset roster names:
 - `openai_generation_ladder`
 - `openai_size_ladder`
@@ -382,7 +410,7 @@ Preset timing note:
 - `openai_mini_reasoning` defaults to a more generous live budget of `120s` turn time and `25s` placement time unless you override those flags explicitly.
 - `openai_mini_medium_vs_high` defaults to `300s` turn time and `50s` placement time, because it is intended specifically as a recovery test for `gpt-5.4-mini-high` against `gpt-5.4-mini-medium`.
 - `openai_mini_high_strategic_hybrid` defaults to `300s` turn time and `25s` placement time, because it is intended to test `high` only on planning and attack while keeping placement, fortify, and card trade on `medium`.
-- `live_turn_frontier_strategic` keeps the normal `90s` execution turn timer and `15s` placement timer, adds an isolated `90s` pre-turn planning timeout, and by default lets OpenAI plan with `gpt-5.5` while `gpt-5.4` handles execution.
+- `live_turn_frontier_strategic` keeps the normal `90s` execution turn timer and `15s` placement timer, adds an isolated `90s` pre-turn planning timeout, and by default lets OpenAI plan with `gpt-5.5` while `gpt-5.1` handles execution.
 - The preset varies reasoning across all game phases, including placement and card trade.
 - Placement prompts are now much more compact and explicitly framed as fast local decisions, so the experiment still measures reasoning differences without wasting the budget on giant setup prompts.
 - The default live-play prompt stack now matches the strongest probe architecture so far: `timed_risk_live` system prompt + compact execution prompts + attack-plan handoff. The heavier per-call `TIME BUDGET` and `FINAL CHECK` blocks are still available for probes, but they are no longer the default for scored play.

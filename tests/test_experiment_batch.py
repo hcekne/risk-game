@@ -87,6 +87,26 @@ def test_compute_experiment_summary_aggregates_player_metrics():
             "turn_times": {"alpha": 40.0, "beta": 35.0},
             "strategic_scores": {"alpha": 4.5, "beta": 3.0},
             "llm_fallback_counts": {"alpha": 0, "beta": 1},
+            "turn_metrics": {
+                "alpha": {
+                    "total_successful_attacks": 6,
+                    "total_failed_attacks": 2,
+                    "average_successful_attacks_per_turn": 3.0,
+                    "average_successful_attacks_per_attacking_turn": 4.0,
+                    "attack_turn_rate": 0.75,
+                    "average_territory_delta_per_turn": 3.0,
+                    "timed_out_turn_count": 1,
+                },
+                "beta": {
+                    "total_successful_attacks": 2,
+                    "total_failed_attacks": 3,
+                    "average_successful_attacks_per_turn": 1.0,
+                    "average_successful_attacks_per_attacking_turn": 2.0,
+                    "attack_turn_rate": 0.5,
+                    "average_territory_delta_per_turn": 1.0,
+                    "timed_out_turn_count": 0,
+                },
+            },
             "error_counts": {
                 "alpha": {
                     "placement": 0,
@@ -103,6 +123,56 @@ def test_compute_experiment_summary_aggregates_player_metrics():
                     "formatting": 1,
                 },
             },
+            "usage_metrics": {
+                "alpha": {
+                    "input_tokens": 1000,
+                    "output_tokens": 500,
+                    "total_tokens": 1500,
+                    "cached_input_tokens": 0,
+                    "reasoning_tokens": 50,
+                    "interaction_count": 2,
+                    "estimated_total_cost_usd": 0.02,
+                    "by_client": [
+                        {
+                            "provider": "OpenAI",
+                            "model": "gpt-5.5",
+                            "client_role": "primary",
+                            "input_tokens": 1000,
+                            "output_tokens": 500,
+                            "total_tokens": 1500,
+                            "cached_input_tokens": 0,
+                            "reasoning_tokens": 50,
+                            "interaction_count": 2,
+                            "estimated_total_cost_usd": 0.02,
+                        }
+                    ],
+                    "missing_pricing_models": [],
+                },
+                "beta": {
+                    "input_tokens": 500,
+                    "output_tokens": 250,
+                    "total_tokens": 750,
+                    "cached_input_tokens": 0,
+                    "reasoning_tokens": 40,
+                    "interaction_count": 2,
+                    "estimated_total_cost_usd": 0.00875,
+                    "by_client": [
+                        {
+                            "provider": "Anthropic",
+                            "model": "claude-opus-4-7",
+                            "client_role": "primary",
+                            "input_tokens": 500,
+                            "output_tokens": 250,
+                            "total_tokens": 750,
+                            "cached_input_tokens": 0,
+                            "reasoning_tokens": 40,
+                            "interaction_count": 2,
+                            "estimated_total_cost_usd": 0.00875,
+                        }
+                    ],
+                    "missing_pricing_models": [],
+                },
+            },
             "game_folder": "game_results/experiments/exp/game__1",
         },
         {
@@ -114,6 +184,26 @@ def test_compute_experiment_summary_aggregates_player_metrics():
             "turn_times": {"alpha": 52.0, "beta": 44.0},
             "strategic_scores": {"alpha": 3.4, "beta": 4.8},
             "llm_fallback_counts": {"alpha": 1, "beta": 0},
+            "turn_metrics": {
+                "alpha": {
+                    "total_successful_attacks": 3,
+                    "total_failed_attacks": 4,
+                    "average_successful_attacks_per_turn": 1.5,
+                    "average_successful_attacks_per_attacking_turn": 3.0,
+                    "attack_turn_rate": 0.5,
+                    "average_territory_delta_per_turn": 1.5,
+                    "timed_out_turn_count": 2,
+                },
+                "beta": {
+                    "total_successful_attacks": 8,
+                    "total_failed_attacks": 2,
+                    "average_successful_attacks_per_turn": 4.0,
+                    "average_successful_attacks_per_attacking_turn": 5.0,
+                    "attack_turn_rate": 0.8,
+                    "average_territory_delta_per_turn": 4.0,
+                    "timed_out_turn_count": 1,
+                },
+            },
             "error_counts": {
                 "alpha": {
                     "placement": 0,
@@ -130,6 +220,56 @@ def test_compute_experiment_summary_aggregates_player_metrics():
                     "formatting": 0,
                 },
             },
+            "usage_metrics": {
+                "alpha": {
+                    "input_tokens": 2000,
+                    "output_tokens": 1000,
+                    "total_tokens": 3000,
+                    "cached_input_tokens": 0,
+                    "reasoning_tokens": 100,
+                    "interaction_count": 3,
+                    "estimated_total_cost_usd": 0.04,
+                    "by_client": [
+                        {
+                            "provider": "OpenAI",
+                            "model": "gpt-5.5",
+                            "client_role": "primary",
+                            "input_tokens": 2000,
+                            "output_tokens": 1000,
+                            "total_tokens": 3000,
+                            "cached_input_tokens": 0,
+                            "reasoning_tokens": 100,
+                            "interaction_count": 3,
+                            "estimated_total_cost_usd": 0.04,
+                        }
+                    ],
+                    "missing_pricing_models": [],
+                },
+                "beta": {
+                    "input_tokens": 800,
+                    "output_tokens": 400,
+                    "total_tokens": 1200,
+                    "cached_input_tokens": 0,
+                    "reasoning_tokens": 60,
+                    "interaction_count": 3,
+                    "estimated_total_cost_usd": 0.014,
+                    "by_client": [
+                        {
+                            "provider": "Anthropic",
+                            "model": "claude-opus-4-7",
+                            "client_role": "primary",
+                            "input_tokens": 800,
+                            "output_tokens": 400,
+                            "total_tokens": 1200,
+                            "cached_input_tokens": 0,
+                            "reasoning_tokens": 60,
+                            "interaction_count": 3,
+                            "estimated_total_cost_usd": 0.014,
+                        }
+                    ],
+                    "missing_pricing_models": [],
+                },
+            },
             "game_folder": "game_results/experiments/exp/game__2",
         },
     ]
@@ -142,6 +282,177 @@ def test_compute_experiment_summary_aggregates_player_metrics():
     assert summary["players"]["alpha"]["mean_final_territories"] == 20
     assert summary["players"]["beta"]["mean_strategic_score"] == 3.9
     assert summary["players"]["beta"]["mean_fallback_count"] == 0.5
+    assert summary["players"]["alpha"]["mean_successful_attacks_per_turn"] == 2.25
+    assert (
+        summary["players"]["beta"]["mean_successful_attacks_per_attacking_turn"] == 3.5
+    )
+    assert summary["players"]["alpha"]["mean_attack_turn_rate"] == 0.625
+    assert summary["players"]["beta"]["mean_timed_out_turn_count"] == 0.5
+    assert summary["total_input_tokens"] == 4300
+    assert summary["total_output_tokens"] == 2150
+    assert summary["players"]["alpha"]["estimated_total_cost_usd"] == 0.06
+    assert summary["players"]["alpha"]["mean_cost_per_game_usd"] == 0.03
+    assert summary["players"]["alpha"]["estimated_cost_per_win_usd"] == 0.06
+    assert summary["players"]["alpha"]["total_successful_attacks"] == 9
+    assert summary["players"]["alpha"]["successful_attacks_per_usd"] == 150.0
+    assert (
+        summary["players"]["alpha"]["cost_breakdown_by_client"][0]["model"] == "gpt-5.5"
+    )
+
+
+def test_run_agent_preflight_pauses_and_retries_provider_quota_errors(monkeypatch):
+    spec = AgentSpec(name="alpha", provider="OpenAI", model="gpt-5.1")
+
+    class QuotaThenSuccessClient:
+        provider_name = "OpenAI"
+        model_type = "gpt-5.1"
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def get_chat_completion(self, *args, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError(
+                    "RateLimitError: quota exceeded {'error': {'code': 'insufficient_quota'}}"
+                )
+            return "OK"
+
+    client = QuotaThenSuccessClient()
+    pause_events = []
+
+    monkeypatch.setattr(
+        "risk_game.utils.experiment_batch.create_llm_client",
+        lambda *args, **kwargs: client,
+    )
+
+    results = run_agent_preflight(
+        [spec],
+        pause_handler=lambda details: pause_events.append(details),
+    )
+
+    assert len(results) == 1
+    assert results[0]["provider"] == "OpenAI"
+    assert client.calls == 2
+    assert len(pause_events) == 1
+    assert pause_events[0]["phase"] == "preflight"
+
+
+def test_compute_experiment_summary_backfills_turn_metrics_from_game_folder(tmp_path: Path):
+    manifest = build_experiment_manifest(
+        label="turn-metric-backfill",
+        preset_name=None,
+        num_games=1,
+        config=GameConfig(),
+        agent_specs=[
+            AgentSpec(name="alpha", provider="OpenAI", model="gpt-5.4"),
+            AgentSpec(name="beta", provider="OpenAI", model="gpt-5.2"),
+        ],
+        seat_rotation_enabled=True,
+        base_folder="game_results/experiments",
+    )
+    game_folder = tmp_path / "game__1"
+    game_folder.mkdir()
+    (game_folder / "turn_summary_turn_1.json").write_text(
+        __import__("json").dumps(
+            {
+                "player": {"name": "alpha"},
+                "derived": {
+                    "successful_attack_count": 3,
+                    "territory_delta": 3,
+                    "turn_timed_out": True,
+                },
+            }
+        )
+    )
+    (game_folder / "turn_summary_turn_2.json").write_text(
+        __import__("json").dumps(
+            {
+                "player": {"name": "alpha"},
+                "derived": {
+                    "successful_attack_count": 0,
+                    "territory_delta": 0,
+                    "turn_timed_out": False,
+                },
+            }
+        )
+    )
+    (game_folder / "turn_summary_turn_3.json").write_text(
+        __import__("json").dumps(
+            {
+                "player": {"name": "beta"},
+                "derived": {
+                    "successful_attack_count": 2,
+                    "territory_delta": 2,
+                    "turn_timed_out": False,
+                },
+            }
+        )
+    )
+    interactions_folder = tmp_path / "llm_interactions" / "game__1" / "alpha" / "round_01" / "turn_0001"
+    interactions_folder.mkdir(parents=True)
+    (interactions_folder / "0001_troop_placement.json").write_text(
+        __import__("json").dumps(
+            {
+                "player": "alpha",
+                "provider": "OpenAI",
+                "model": "gpt-5.1",
+                "client_role": "primary",
+                "response": {
+                    "usage": {
+                        "input_tokens": 1000,
+                        "output_tokens": 500,
+                        "total_tokens": 1500,
+                        "cached_input_tokens": 0,
+                        "reasoning_tokens": 50,
+                    }
+                },
+            }
+        )
+    )
+    results = [
+        {
+            "winner": "alpha",
+            "victory_condition": "Territory Control 65%",
+            "rounds": 5,
+            "elapsed_seconds": 100.0,
+            "territories": {"alpha": 28, "beta": 14},
+            "turn_times": {"alpha": 40.0, "beta": 35.0},
+            "strategic_scores": {"alpha": 4.5, "beta": 3.0},
+            "llm_fallback_counts": {"alpha": 0, "beta": 1},
+            "error_counts": {
+                "alpha": {
+                    "placement": 0,
+                    "attack": 0,
+                    "fortify": 0,
+                    "card_trade": 0,
+                    "formatting": 0,
+                },
+                "beta": {
+                    "placement": 0,
+                    "attack": 0,
+                    "fortify": 0,
+                    "card_trade": 0,
+                    "formatting": 0,
+                },
+            },
+            "game_folder": str(game_folder),
+        }
+    ]
+
+    summary = compute_experiment_summary(manifest, results)
+
+    assert summary["players"]["alpha"]["mean_successful_attacks_per_turn"] == 1.5
+    assert (
+        summary["players"]["alpha"]["mean_successful_attacks_per_attacking_turn"]
+        == 3.0
+    )
+    assert summary["players"]["alpha"]["mean_attack_turn_rate"] == 0.5
+    assert summary["players"]["alpha"]["mean_timed_out_turn_count"] == 1
+    assert summary["players"]["beta"]["mean_successful_attacks_per_turn"] == 2.0
+    assert summary["players"]["alpha"]["total_input_tokens"] == 1000
+    assert summary["players"]["alpha"]["estimated_total_cost_usd"] == 0.00625
+    assert summary["players"]["alpha"]["mean_cost_per_game_usd"] == 0.00625
 
 
 def test_build_status_line_is_compact_and_informative():

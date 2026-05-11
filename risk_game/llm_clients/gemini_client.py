@@ -188,6 +188,30 @@ class GeminiClient(LLMClient):
             raise RuntimeError(f"Gemini response contained no text parts: {payload}")
         return "".join(text_parts)
 
+    def _standardize_usage(
+        self,
+        usage_metadata: Optional[Dict[str, object]],
+    ) -> Optional[Dict[str, Optional[int]]]:
+        if not usage_metadata:
+            return None
+        input_tokens = usage_metadata.get("promptTokenCount")
+        output_tokens = usage_metadata.get("candidatesTokenCount")
+        thoughts_tokens = usage_metadata.get("thoughtsTokenCount")
+        total_tokens = usage_metadata.get("totalTokenCount")
+        if (
+            total_tokens is None
+            and input_tokens is not None
+            and output_tokens is not None
+        ):
+            total_tokens = int(input_tokens) + int(output_tokens)
+        return {
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total_tokens,
+            "cached_input_tokens": usage_metadata.get("cachedContentTokenCount"),
+            "reasoning_tokens": thoughts_tokens,
+        }
+
     def get_chat_completion(
         self,
         message_content,
@@ -238,7 +262,17 @@ class GeminiClient(LLMClient):
                     timeout=request_timeout,
                 )
                 response.raise_for_status()
-                return self._extract_text(response.json())
+                response_payload = response.json()
+                self.set_last_response_metadata(
+                    {
+                        "api_variant": "generate_content",
+                        "usage": self._standardize_usage(
+                            response_payload.get("usageMetadata")
+                        ),
+                        "raw_usage": response_payload.get("usageMetadata"),
+                    }
+                )
+                return self._extract_text(response_payload)
             except (requests.Timeout, requests.ConnectionError) as exc:
                 last_error = exc
                 if attempt == max_attempts - 1:

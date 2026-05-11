@@ -1,0 +1,56 @@
+[
+  {
+    "name": "kimi-k2.6-a",
+    "provider": "Moonshot",
+    "model": "kimi-k2.6",
+    "enable_thinking": false,
+    "planning_provider": "Moonshot",
+    "planning_model": "kimi-k2.6",
+    "planning_enable_thinking": true,
+    "planning_time_limit_seconds": 90,
+    "placement_reasoning_effort": "medium",
+    "planning_reasoning_effort": "high",
+    "attack_reasoning_effort": "medium",
+    "fortify_reasoning_effort": "medium",
+    "card_trade_reasoning_effort": "low"
+  },
+  {
+    "name": "kimi-k2.6-b",
+    "provider": "Moonshot",
+    "model": "kimi-k2.6",
+    "enable_thinking": false,
+    "planning_provider": "Moonshot",
+    "planning_model": "kimi-k2.6",
+    "planning_enable_thinking": true,
+    "planning_time_limit_seconds": 90,
+    "placement_reasoning_effort": "medium",
+    "planning_reasoning_effort": "high",
+    "attack_reasoning_effort": "medium",
+    "fortify_reasoning_effort": "medium",
+    "card_trade_reasoning_effort": "low"
+  },
+  {
+    "name": "claude-opus-4-20250514-a",
+    "provider": "Anthropic",
+    "model": "claude-opus-4-20250514",
+    "enable_thinking": true,
+    "planning_time_limit_seconds": 90,
+    "placement_reasoning_effort": "medium",
+    "planning_reasoning_effort": "high",
+    "attack_reasoning_effort": "medium",
+    "fortify_reasoning_effort": "medium",
+    "card_trade_reasoning_effort": "low"
+  },
+  {
+    "name": "claude-opus-4-20250514-b",
+    "provider": "Anthropic",
+    "model": "claude-opus-4-20250514",
+    "enable_thinking": true,
+    "planning_time_limit_seconds": 90,
+    "placement_reasoning_effort": "medium",
+    "planning_reasoning_effort": "high",
+    "attack_reasoning_effort": "medium",
+    "fortify_reasoning_effort": "medium",
+    "card_trade_reasoning_effort": "low"
+  }
+]

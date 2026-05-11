@@ -14,6 +14,267 @@ It serves two purposes:
 - Evaluate strategic behavior from observable artifacts, not hidden chain-of-thought.
 - Separate `model is bad at the task` from `the runtime/prompt/config is broken`.
 
+## Current Research Priority
+
+- The confirmatory provider replicate is now complete, and the pooled `32`-game provider result currently supports `gemini-3.1-pro-preview` as the strongest tested provider representative under the frozen strategic live-turn condition.
+- The next article-grade question is not another provider roster search but a capability-anchoring study for `kimi-k2.6`.
+- That anchoring study should be framed as a provider-anchor comparison, not a literal "months behind" claim, unless the accessible historical model grid is dense enough to justify a time-based translation.
+- The first-pass Kimi anchoring design should use duplicate-team `2x2` arenas against one anchor family at a time so family-level strength can be estimated with lower variance and parallelized execution.
+- The broader narrative is now shifting from pure model ranking to **LLM system design**:
+  - which model should plan?
+  - which model should execute?
+  - where can cost be cut without giving away too much strength?
+  - how do we build a benchmark agent strong enough to test future non-LLM engines?
+
+### Cost estimation is now a tracked research dimension
+
+The experiment summaries now estimate API cost from saved usage metadata and a local pricing snapshot rather than from manual billing inspection.
+
+Current rule:
+- cost claims should cite the local pricing snapshot and stay explicitly labeled as estimates
+- historical runs before usage logging landed should not be used for cost-per-win comparisons
+- cost metrics are now first-class secondary outcomes because they materially affect real-world deployability for live agent systems
+
+### 2026-05-09 next-stage roadmap shifts from provider ranking to cheap benchmark-agent construction
+
+The provider winner question is now materially clearer than it was at the start of the project:
+- Gemini is the current full-stack leader under the frozen live strategic condition
+- Kimi has now been triangulated against older OpenAI, Gemini, and Anthropic anchor tiers
+
+That means the next stage should optimize for practical benchmark construction, not more provider leaderboard churn.
+
+The staged plan is:
+- first, finish the `gemini-3-flash-preview` execution cost gate
+- second, if Flash preserves enough strength, use that cheaper Gemini scaffold as the execution layer in a planner-only hybrid championship
+- third, freeze the winning cheap Gemini-based hybrid as the benchmark agent for later non-LLM engine work
+
+This matters because future engine or rules-based systems will need a strong but affordable LLM baseline opponent. A full frontier-model stack is too expensive for large-scale repeated evaluation.
+
+### 2026-05-09 goal-directed planning language is now an explicit analysis target
+
+There is now a working hypothesis that part of Gemini's live-game edge comes from more persistent goal direction in its observable planning text.
+
+The specific claim to test is not “Gemini sounds smarter.” It is narrower:
+- Gemini may track the game objective more explicitly
+- Gemini may more often quantify distance to the `65%` win target
+- Gemini may re-anchor on the win condition more consistently after setbacks or blocked lines
+- that style of planning may help in bounded agent loops where objective drift is costly
+
+Methodological constraint:
+- study only the saved observable planning outputs already written to the interaction logs
+- do not rely on hidden reasoning or unavailable chain-of-thought
+- combine simple lexical/phrase counts with a smaller manual coding pass so the later write-up can distinguish surface wording from genuinely goal-directed planning structure
+
+### 2026-05-09 Gemini 3 Flash cost gate picks a cheap scaffold without collapsing strength
+
+Saved pooled series:
+- `/shared-game-results/experiment_series/gemini3_flash_execution_cost_gate_15_pooled`
+
+Headline result:
+- `gemini-3.1-plan_gemini-3-flash-exec` won `8 / 15`
+- `gemini-3.1-pro-full` won `4 / 15`
+- `gemini-3-flash-full` won `3 / 15`
+
+Interpretation:
+- pure Flash execution is viable
+- pure Flash planning gives away enough that it should not be the default benchmark scaffold
+- `gemini-3.1-pro-preview` planning on `gemini-3-flash-preview` execution is far cheaper than `gemini-3.1-pro-preview` full-stack while performing better on the primary endpoint in this pooled cost-gate batch
+
+Operational decision:
+- lock `gemini-3.1-pro-preview` planning + `gemini-3-flash-preview` execution as the current practical scaffold for the next planner-only hybrid championship
+
+This is a practical system-design decision, not yet a publication-grade theorem that the hybrid dominates all Gemini variants. The point of the cost gate was to choose a strong and affordable execution layer for the next stage, and it succeeded.
+
+### 2026-05-09 pooled 32-game Flash-exec planner bakeoff is mostly a near-equality result
+
+Saved pooled series:
+- `/shared-game-results/experiment_series/gemini3_flash_execution_planner_hybrid_bakeoff_32_pooled`
+
+Headline result:
+- Claude planner: `10`
+- Gemini planner: `8`
+- GPT-5.5 planner: `8`
+- Kimi planner: `6`
+
+Interpretation:
+- once execution is standardized to `gemini-3-flash-preview`, the remaining planning differences are much smaller than the earlier full-stack provider gaps
+- the pooled winner split is fully compatible with near-equality on wins
+- the more important result is therefore structural, not leaderboard-based: decomposition removed much of the provider spread
+
+Practical consequence:
+- do not overclaim a planner winner from this pooled `32`
+- if the next question is specifically Claude vs Kimi planning quality, switch from the four-way bakeoff to a direct duplicate-team `2x2` duel on the same Flash execution scaffold
+
+### 2026-05-10 direct Claude-vs-Kimi Flash-exec duel still does not separate the planners
+
+Saved pooled series:
+- `/shared-game-results/experiment_series/claude_vs_kimi_flash_exec_planner_team_16_pooled`
+
+Headline result:
+- Claude team: `9`
+- Kimi team: `7`
+
+Interpretation:
+- the direct duel removes the sample-efficiency problem from the earlier four-way planner bakeoff
+- even so, the outcome remains a near-parity result on wins
+- Claude looks cleaner on secondary metrics:
+  - faster
+  - lower fallback burden
+  - higher strategic score
+- Kimi remains competitive enough on the primary endpoint that a strong `Claude > Kimi` planning claim is still not justified
+
+The broader lesson is unchanged:
+- once execution is standardized to a strong cheap Gemini scaffold, the remaining planner differences are much smaller than the earlier full-stack provider gaps
+- more brute-force planner duels have sharply diminishing returns unless they are tied to a much more focused mechanistic question
+
+### 2026-05-10 provider-32 trace analyses now support a mechanism story
+
+Saved trace-analysis artifacts:
+- `/shared-game-results/experiment_series/frontier_strategic_provider_32_pooled/trace_analysis/planning_trace_metrics.json`
+- `/shared-game-results/experiment_series/frontier_strategic_provider_32_pooled/trace_analysis/execution_trace_metrics.json`
+
+Tracked notes:
+- [2026-05-10_provider32-goal-directedness-trace-analysis.md](experiment-suites/2026-q2-strategic-tests/2026-05-10_provider32-goal-directedness-trace-analysis.md)
+- [2026-05-10_provider32-execution-trace-analysis.md](experiment-suites/2026-q2-strategic-tests/2026-05-10_provider32-execution-trace-analysis.md)
+
+Headline findings:
+- Gemini is the only provider in the pooled `32`-game provider series that tracks the win objective explicitly in a large share of its visible plans
+- that explicit goal tracking rises sharply as Gemini approaches the `65%` win target
+- on execution, Gemini is not the cleanest runtime, but it converts more turns into deep conquest chains than the rest of the field
+- Claude is cleaner, GPT is heavily timeout-dragged, and Kimi is less continuous in attack/fortify execution
+
+Interpretation:
+- the project now has both outcome-level evidence and mechanism-level evidence
+- that is enough to move the eventual write-up from a leaderboard report toward a live-agent systems paper
+
+### 2026-05-10 paper planning is now explicit
+
+Saved paper-arc document:
+- [2026-05-10_live-agent-risk-arxiv-arc.md](article-plans/2026-05-10_live-agent-risk-arxiv-arc.md)
+
+Working framing:
+- this should be written as a live-agent systems study under bounded strategic execution
+- not as a universal intelligence ranking
+
+### 2026-05-09 dissemination should translate the experiments into a broader system-design lesson
+
+The eventual output should not stop at “Gemini won this tournament” or “Kimi is roughly at this older tier.”
+
+The stronger public lesson is:
+- model benchmarking inside a real agent loop exposes weaknesses that leaderboard-style evaluations hide
+- the best end-to-end system may be a hybrid, not a single flagship model
+- task decomposition across planning and execution can improve both cost and performance
+- real builders should evaluate models as components of workflows, not just as standalone chatbots
+
+Planned output stack:
+- one research-style source article
+- one `~1500` word LinkedIn newsletter post
+- one narrower Towards Data Science piece
+- three short LinkedIn posts
+- one YouTube manuscript
+
+These should all share the same evidence base but emphasize different takeaways for different audiences.
+
+### 2026-05-07 provider replication confirms the Gemini lead
+
+The provider winner question is now materially clearer than it was after the first balanced `16`.
+
+Saved results:
+- balanced salvaged provider series: `/shared-game-results/experiment_series/frontier_strategic_full_16_salvaged`
+- clean direct provider replicate: `/shared-game-results/experiments/experiment__2026-05-06_11-13-05__frontier_strategic_replicate_2_16`
+- pooled provider series: `/shared-game-results/experiment_series/frontier_strategic_provider_32_pooled`
+
+Headline result:
+- Gemini won `10 / 16` in the balanced salvaged block
+- Gemini won `10 / 16` again in the clean direct replicate
+- pooled over `32` games, Gemini now has `20` wins against GPT-5.1 `6`, Claude `4`, and Kimi `2`
+
+Interpretation:
+- the identity of the provider winner is now stable enough to treat Gemini as the current best model in this tested field and deployment condition
+- the unresolved secondary question is GPT-5.1 versus Claude for second place, not who wins overall
+- future provider-wide reruns should be justified by a changed roster, pricing/cost question, or methodology shift rather than by residual doubt about the Gemini lead itself
+
+### 2026-05-08 Kimi vs GPT-4.1 anchor suggests near-parity with a strong cost advantage
+
+Saved experiment:
+- `/shared-game-results/experiments/experiment__2026-05-07_15-34-43__kimi_anchor_openai_gpt41_team_16`
+
+Headline result:
+- duplicated `gpt-4.1` team beat duplicated `kimi-k2.6` team `9-7`
+- that win gap is fully compatible with chance on an exact binomial read
+
+Interpretation:
+- Kimi does not look like a current-provider-frontier model in this environment
+- but it does look broadly competitive with the `gpt-4.1` anchor tier
+- Kimi is also materially cheaper on the new cost instrumentation, which makes the anchor result more practically important than a simple win table would suggest
+
+### 2026-05-08 Kimi vs Gemini 2.5 Pro anchor puts Kimi below an older Google tier
+
+Saved experiment:
+- `/shared-game-results/experiments/experiment__2026-05-07_15-35-19__kimi_anchor_gemini25pro_team_16`
+
+Headline result:
+- duplicated `gemini-2.5-pro` team beat duplicated `kimi-k2.6` team `9-7`
+- the result is directional rather than overwhelming:
+  - one-sided exact binomial `p ≈ 0.038`
+  - two-sided exact binomial `p ≈ 0.077`
+
+Interpretation:
+- Kimi looks somewhat weaker than the Gemini 2.5 Pro anchor tier in this environment
+- the gap is real enough to take seriously, but still smaller than a casual “frontier versus weak open model” narrative would suggest
+- Kimi remains materially better on cost efficiency, even while losing the strength comparison
+
+Most useful public framing:
+- Google announced Gemini 2.5 Pro on `2025-03-25`, with GA on `2025-06-17`
+- Moonshot announced Kimi K2.6 on `2026-04-21`
+- so Kimi 2.6 arrives roughly `10-13` months after Gemini 2.5 Pro depending on which Gemini milestone is used
+- yet in this live strategic setting Kimi only reaches near-parity / modestly trails that older Gemini tier
+
+That is not a literal “months behind” theorem, but it is a strong and defensible interpretation of the current anchor evidence.
+
+### 2026-05-08 Kimi vs Anthropic Sonnet 4 (20250514) shows operational parity or better
+
+Saved experiment:
+- `/shared-game-results/experiments/experiment__2026-05-07_17-43-42__kimi_anchor_anthropic_sonnet4_20250514_team_16`
+
+Headline result:
+- duplicated `kimi-k2.6` team beat duplicated `claude-sonnet-4-20250514` team `9-7`
+- that win gap is fully compatible with chance on an exact binomial read
+
+Interpretation:
+- Kimi does not look clearly stronger than this older Anthropic Sonnet tier
+- but it does look fully competitive, and descriptively ahead, on the primary endpoint
+- more importantly, Kimi reaches the actual `65%` victory condition more often, while the Sonnet team wins more often by surviving to the round cap
+
+Operationally, the difference is sharper than the win table:
+- Sonnet posts higher rubric scores, but it times out constantly under this harness
+- Kimi is much cheaper and far less timeout-prone
+- so in live deployment terms, Kimi is arguably the better agent here even without a decisive statistical win gap
+
+This sharpens the current anchor picture:
+- near GPT-4.1
+- below Gemini 2.5 Pro
+- competitive with this older Anthropic Sonnet tier
+- still clearly below the current Gemini 3.1 frontier result
+
+### 2026-05-08 Anthropic Sonnet 4.5 follow-up should be archived from the main story
+
+Saved experiment:
+- `/shared-game-results/experiments/experiment__2026-05-07_17-43-31__kimi_anchor_anthropic_sonnet45_team_16`
+
+Why it is not a good anchor candidate:
+- Sonnet 4.5 under the current thinking-enabled full-stack live harness is an extreme runtime mismatch
+- each Claude copy averaged roughly `24.5-25.5` fallback calls and roughly `10.6-10.8` timed-out turns per game
+- the pricing table is missing `claude-sonnet-4-5-20250929`, so the cost side of the run is incomplete
+
+Interpretation:
+- the run is more a demonstration of deployment mismatch than of clean capability anchoring
+- it does not add much beyond the older Sonnet 4 anchor that already places Kimi around parity with an older Anthropic tier
+
+Decision:
+- archive Sonnet 4.5 from the main anchoring narrative
+- keep Sonnet 4 (20250514) as the Anthropic anchor for this story
+
 ## Key Decisions And Findings
 
 ### Container-first runtime is the standard
@@ -616,3 +877,168 @@ Artifact:
 Interpretation:
 - this was a provider quota/infrastructure block, not a meaningful experimental outcome
 - do not count that folder as a completed cross-provider strategic comparison
+
+### 2026-05-04 combined generation ladder result: `gpt-5.1` is the current OpenAI live-turn baseline
+
+We combined two completed `16`-game strategic generation-ladder replicates into one `32`-game blocked analysis:
+
+- `/shared-game-results/experiments/experiment__2026-05-02_09-00-55__openai_generation_ladder_541_strategic_16`
+- `/shared-game-results/experiments/experiment__2026-05-03_07-17-54__openai_generation_ladder_541_strategic_16_rep2`
+
+Tracked note:
+- [OpenAI Generation Ladder Strategic 32](experiment-suites/2026-q2-strategic-tests/2026-05-04_openai-generation-ladder-541-strategic-32.md)
+
+Headline result:
+- `gpt-5.1`: `18 / 32` wins
+- `gpt-5.2`: `7 / 32`
+- `gpt-4.1`: `4 / 32`
+- `gpt-5.4`: `3 / 32`
+
+Primary win benchmark:
+- winner-label permutation omnibus on wins: `p = 0.000485`
+- Holm-corrected pairwise support:
+  - `gpt-5.1 > gpt-5.4`
+  - `gpt-5.1 > gpt-4.1`
+- `gpt-5.1` vs `gpt-5.2` was **not** significant after Holm correction on win-only tests
+
+Secondary territory benchmark:
+- `gpt-5.1` mean final territories: `19.38`
+- `gpt-5.2`: `9.53`
+- `gpt-5.4`: `7.09`
+- `gpt-4.1`: `6.00`
+
+Operational explanation:
+- `gpt-5.1` did **not** win by having the best strategic rubric score; `gpt-5.2` slightly led there
+- `gpt-5.1` won by converting turns into successful attacks and territory better than the others
+- `gpt-5.4` was the slowest model in the important repeated phases and suffered severe placement/attack timeout pressure
+
+Why this matters:
+- the earlier working assumption that `gpt-5.4-medium` was the default next OpenAI candidate is no longer the best repo-level conclusion for the strategic live-turn condition
+- the current working OpenAI baseline for strategic live-turn play should be `gpt-5.1`
+- the best current planning-only hybrid candidate is `gpt-5.2` over `gpt-5.1` execution
+
+Important framing correction:
+- the broad all-pairs Holm family across all `6` unordered comparisons is stricter than the actual follow-up question that motivated the second replicate
+- after the first `16` games, the main unresolved issue was whether `gpt-5.1 > gpt-5.2`
+- under the narrower `gpt-5.1`-vs-rest Holm family that matches that follow-up question, the combined `32` games do support `gpt-5.1 > gpt-5.2` on wins
+
+Practical conclusion:
+- it is still correct to say that the broadest all-pairs family is more conservative
+- but for the actual experimental sequence run here, the combined evidence should be read as reinforcing the initial `gpt-5.1 > gpt-5.2` signal rather than leaving it fully unresolved
+
+### 2026-05-04 planner-only hybrid showdown was inconclusive
+
+We then ran the planner-only hybrid ablation:
+
+- `/shared-game-results/experiments/experiment__2026-05-03_20-35-06__openai_51_execution_hybrid_planning_showdown_16`
+
+Tracked note:
+- [OpenAI 5.1 Execution Hybrid Planning Showdown](experiment-suites/2026-q2-strategic-tests/2026-05-04_openai-51-execution-hybrid-planning-showdown.md)
+
+Roster:
+- `gpt-5.1-full`
+- `gpt-5.5-plan / gpt-5.1-exec`
+- `gpt-5.4-plan / gpt-5.1-exec`
+- `gpt-5.2-plan / gpt-5.1-exec`
+
+Headline win result:
+- `gpt-5.2-plan / gpt-5.1-exec`: `5 / 16`
+- `gpt-5.1-full`: `4 / 16`
+- `gpt-5.5-plan / gpt-5.1-exec`: `4 / 16`
+- `gpt-5.4-plan / gpt-5.1-exec`: `3 / 16`
+
+Primary inference:
+- winner-label permutation omnibus: `p = 0.985`
+- no pairwise win test separated any variant from any other
+
+Interpretation:
+- this batch is almost perfectly compatible with equal win probabilities
+- the planner-only effect, if real, is much smaller than the earlier full-stack generation differences
+- `gpt-5.2` planning looked slightly best descriptively
+- `gpt-5.5` planning remained fully plausible and was not beaten decisively
+- `gpt-5.4` planning was the weakest descriptive option, but not in a way that supports a strong win-based claim at this sample size
+
+Prior-sensitive read:
+- if the prior is “all planner variants are equal once `gpt-5.1` execution is fixed,” this batch gives no reason to move far away from that view
+- if the prior is “`gpt-5.5 > gpt-5.4 > gpt-5.2 > gpt-5.1`,” this batch does not support that order either
+
+Practical consequence:
+- do not claim that `gpt-5.2` is a proven better planner than `gpt-5.5`
+- if the planner choice matters, resolve it with a larger direct playoff rather than with broader mixed planner rosters
+
+### 2026-05-04 strategic provider roster now uses `gpt-5.1` execution and `gpt-5.5` planning
+
+- the current cross-provider strategic preset now defaults to `gpt-5.1` for execution and `gpt-5.5` for the isolated planning phase
+- rationale: the `32`-game OpenAI generation ladder established `gpt-5.1` as the strongest full-stack live-turn OpenAI model, while the later planner-only showdown did not provide strong evidence to displace `gpt-5.5` as the planning override
+- added `configs/experiments/2026_q2_cross_provider_frontier_strategic.json` as the current frozen provider roster
+- added `scripts/experiment_commands.sh` and `scripts/run_listed_experiment.sh` so experiment launches can be stored as numbered command lines instead of repeatedly typing long `make run-experiment ...` strings
+
+### 2026-05-04 agent policy update: ambiguity, simplicity, and surgical scope
+
+- `AGENTS.md` now explicitly requires four repo-level agent behaviors:
+  - think before coding and surface ambiguity instead of guessing
+  - prefer the minimum sufficient implementation
+  - keep changes surgical and avoid unrelated cleanup
+  - turn vague instructions into concrete, testable targets before editing code
+
+### 2026-05-04 strategic cross-provider retry is invalid
+
+- `/shared-game-results/experiments/experiment__2026-05-04_11-33-15__frontier_strategic_full_16`
+- the trial completed `10` games and then failed during initial troop placement with `ValueError: Invalid territory assignment`
+- root cause 1: single-move initial-placement parsing could apply more than one `|||Territory, 1|||` block from one response
+- root cause 2: OpenAI quota exhaustion started in game `9` and heavily contaminated games `9+`
+- the batch should be treated as invalid rather than partially salvageing later subsets
+- tracked note: [Cross-Provider Frontier Strategic Full 16: Invalid Trial](experiment-suites/2026-q2-strategic-tests/2026-05-04_cross-provider-frontier-strategic-full-invalid.md)
+
+### 2026-05-05 strategic cross-provider retry 2 salvage plan
+
+- `/shared-game-results/experiments/experiment__2026-05-04_21-00-11__frontier_strategic_full_16_retry_2`
+- this rerun completed all `16` games after the setup parser fix, so the earlier placement corruption is no longer the issue here
+- Anthropic credits ran out during games `7-12`, contaminating only the `claude-opus-4-7` side of that window
+- no Gemini quota failures were observed in this rerun
+- games `13-16` look clean again after the Anthropic refill
+- salvage plan:
+  - keep games `1-6`
+  - keep games `13-16`
+  - drop games `7-12`
+  - append a clean `6`-game top-up using `configs/experiments/2026_q2_cross_provider_frontier_strategic_topup_6.json`
+  - combine the retained `10` games plus the clean top-up to form the final balanced `16`-game provider experiment
+- tracked note: [Cross-Provider Frontier Strategic Full 16 Retry 2: Salvage Plan](experiment-suites/2026-q2-strategic-tests/2026-05-05_cross-provider-frontier-strategic-retry-2-salvage-plan.md)
+
+### 2026-05-06 balanced cross-provider strategic result favors Gemini
+
+The clean `10`-game subset from `frontier_strategic_full_16_retry_2` was combined with the clean `6`-game `frontier_strategic_topup_6` batch into a reconstructed balanced provider series:
+
+- `/shared-game-results/experiment_series/frontier_strategic_full_16_salvaged`
+
+That merged series restores perfect seat balance by giving every provider `4` appearances in each seat.
+
+Final win counts:
+- `gemini-3.1-pro-preview`: `10`
+- `claude-opus-4-7`: `3`
+- `gpt-5.1`: `2`
+- `kimi-k2.6`: `1`
+
+Important interpretation:
+- Gemini is the current strongest provider representative under this strategic live `90 / 90 / 15` condition
+- Claude is operationally cleaner than GPT-5.1, but still wins much less often than Gemini
+- GPT-5.1 remains strategically credible but continues to lose ground through higher timeout/fallback pressure
+
+Tracked note:
+- [Cross-Provider Frontier Strategic 16: Salvaged Balanced Result](experiment-suites/2026-q2-strategic-tests/2026-05-06_cross-provider-frontier-strategic-16-salvaged.md)
+
+### 2026-05-06 roadmap update after the balanced provider result
+
+The provider result changes the experimental priorities.
+
+What is now resolved enough:
+- `gpt-5.1` is the current OpenAI live-turn baseline
+- the older short `gpt-5.5 / gpt-5.4 / gpt-4.1` baseline plan is no longer a high-value next step
+
+What is now highest priority:
+- implement quota/billing-aware pause and operator resume for long provider runs
+- run one clean confirmatory replicate of the current strategic provider lineup
+
+What is lower priority until that replicate exists:
+- more OpenAI-only ladder cleanup
+- broader representation or learning work that assumes the provider ranking is already stable

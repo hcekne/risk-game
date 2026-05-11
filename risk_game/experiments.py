@@ -396,7 +396,7 @@ def build_live_turn_frontier_roster(
 
 def build_live_turn_frontier_strategic_roster(
     *,
-    openai_model: str = "gpt-5.4",
+    openai_model: str = "gpt-5.1",
     openai_planning_model: Optional[str] = "gpt-5.5",
     openai_reasoning_effort: str = "medium",
     openai_verbosity: str = "low",
@@ -422,7 +422,7 @@ def build_live_turn_frontier_strategic_roster(
     rather than the stricter historical low-latency frontier smoke condition.
 
     Provider intent:
-    - OpenAI executes with `gpt-5.4`, but plans with `gpt-5.5`.
+    - OpenAI executes with `gpt-5.1`, but plans with `gpt-5.5`.
     - Anthropic uses one thinking-enabled client and varies effort by phase.
     - Gemini uses one client; planning runs at `high`, execution phases at `medium`.
     - Kimi keeps execution thinking disabled, but enables thinking on the

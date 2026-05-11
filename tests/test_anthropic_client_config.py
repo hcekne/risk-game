@@ -67,6 +67,7 @@ def test_anthropic_client_uses_adaptive_thinking_when_supported():
         "type": "adaptive",
         "display": "omitted",
     }
+    assert client.client.last_params["max_tokens"] == 4000
     assert "temperature" not in client.client.last_params
 
 
@@ -105,6 +106,45 @@ def test_anthropic_client_maps_reasoning_effort_to_manual_thinking_budget():
         "budget_tokens": 24000,
         "display": "omitted",
     }
+    assert client.client.last_params["max_tokens"] == 24512
+
+
+@patch("risk_game.llm_clients.anthropic_client.Anthropic", DummyAnthropic)
+def test_legacy_manual_thinking_snapshots_raise_max_tokens_above_budget():
+    client = AnthropicClient(
+        model_name="claude-opus-4-20250514",
+        enable_thinking=True,
+        thinking_budget=2000,
+    )
+
+    response = client.get_chat_completion("test prompt", reasoning_effort="medium")
+
+    assert response == "stub-response"
+    assert client.client.last_params["thinking"] == {
+        "type": "enabled",
+        "budget_tokens": 4096,
+        "display": "omitted",
+    }
+    assert client.client.last_params["max_tokens"] == 4608
+
+
+@patch("risk_game.llm_clients.anthropic_client.Anthropic", DummyAnthropic)
+def test_manual_thinking_uses_custom_budget_when_no_override_is_passed():
+    client = AnthropicClient(
+        model_name="claude-opus-4-20250514",
+        enable_thinking=True,
+        thinking_budget=5000,
+    )
+
+    response = client.get_chat_completion("test prompt")
+
+    assert response == "stub-response"
+    assert client.client.last_params["thinking"] == {
+        "type": "enabled",
+        "budget_tokens": 5000,
+        "display": "omitted",
+    }
+    assert client.client.last_params["max_tokens"] == 5512
 
 
 @patch("risk_game.llm_clients.anthropic_client.Anthropic", DummyAnthropic)

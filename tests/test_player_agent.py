@@ -52,6 +52,22 @@ class PlayerAgentTests(unittest.TestCase):
         self.assertIsNone(reasoning)
         self.assertIsNone(from_territory)
 
+    def test_parse_response_text_single_move_only_uses_last_explicit_move(self):
+        response = (
+            "The final move will be formatted as Move:|||Peru, 1|||.\n"
+            "Move:|||Peru, 1|||\n"
+            "Reasoning:+++Reinforce Peru.+++"
+        )
+
+        moves, reasoning, from_territory = self.player.parse_response_text(
+            response,
+            single_move_only=True,
+        )
+
+        self.assertEqual(moves, [{"territory_name": "Peru", "num_troops": 1}])
+        self.assertEqual(reasoning, "Reinforce Peru.")
+        self.assertIsNone(from_territory)
+
     def test_parse_card_trade_response_extracts_indices_and_reasoning(self):
         cards, reasoning = self.player.parse_card_trade_response(
             "Trade: |||1, 3, 4||| Reasoning:+++Best value now+++"
@@ -100,6 +116,51 @@ class PlayerAgentTests(unittest.TestCase):
         decision_log = player.get_turn_decision_log()
         self.assertTrue(decision_log[0]["used_fallback_response"])
         self.assertIn("simulated timeout", decision_log[0]["error"])
+
+    def test_provider_pause_handler_retries_exact_prompt_instead_of_fallback(self):
+        _, game_state, rules = make_game_state("Alice", "Bob", "Carol")
+        seed_full_board(game_state, ["Alice", "Bob", "Carol"])
+        target_territory = game_state.get_player_territories("Alice")[0]
+
+        class QuotaThenSuccessLLMClient(StubLLMClient):
+            def __init__(self) -> None:
+                super().__init__()
+                self.provider_name = "Anthropic"
+                self.model_type = "claude-opus-4-7"
+                self.calls = 0
+
+            def get_chat_completion(self, messages, **kwargs) -> str:
+                self.calls += 1
+                if self.calls == 1:
+                    raise RuntimeError(
+                        "AnthropicError: Your credit balance is too low to access the Anthropic API."
+                    )
+                return (
+                    f"Move 1: |||{target_territory}, 3|||\n"
+                    "Reasoning:+++Retry after refill.+++"
+                )
+
+        client = QuotaThenSuccessLLMClient()
+        player = PlayerAgent("Alice", client)
+        player.troops = 3
+        player._call_llm_with_timeout = lambda message_content, **kwargs: (
+            player.send_message(message_content, **kwargs)
+        )
+        pause_events = []
+        player.configure_provider_pause_handler(lambda details: pause_events.append(details))
+
+        moves, reasoning, _ = player.make_troop_placement(rules, game_state)
+
+        self.assertEqual(moves, [{"territory_name": target_territory, "num_troops": 3}])
+        self.assertEqual(reasoning, "Retry after refill.")
+        self.assertEqual(len(pause_events), 1)
+        self.assertEqual(pause_events[0]["provider"], "Anthropic")
+        self.assertEqual(pause_events[0]["phase"], "troop_placement")
+        self.assertEqual(client.calls, 2)
+        decision_log = player.get_turn_decision_log()
+        self.assertEqual(len(decision_log), 1)
+        self.assertFalse(decision_log[0]["used_fallback_response"])
+        self.assertIsNone(decision_log[0]["error"])
 
     def test_attack_uses_skip_fallback_response_on_llm_error(self):
         _, game_state, rules = make_game_state("Alice", "Bob", "Carol")
@@ -483,6 +544,105 @@ class PlayerAgentTests(unittest.TestCase):
             decision = player.get_turn_decision_log()[0]
             self.assertEqual(decision["interaction_index"], 1)
             self.assertEqual(decision["scope"], "turn")
+
+    def test_llm_interaction_logger_writes_usage_metadata(self):
+        _, game_state, rules = make_game_state("Alice", "Bob", "Carol")
+        seed_full_board(game_state, ["Alice", "Bob", "Carol"])
+
+        target_territory = game_state.get_player_territories("Alice")[0]
+
+        class UsageLLMClient(StubLLMClient):
+            def __init__(self) -> None:
+                super().__init__()
+                self.provider_name = "OpenAI"
+                self.model_type = "gpt-5.1"
+
+            def get_chat_completion(self, messages, **kwargs) -> str:
+                self.set_last_response_metadata(
+                    {
+                        "api_variant": "responses",
+                        "usage": {
+                            "input_tokens": 123,
+                            "output_tokens": 45,
+                            "total_tokens": 168,
+                            "cached_input_tokens": 0,
+                            "reasoning_tokens": 12,
+                        },
+                        "raw_usage": {"input_tokens": 123, "output_tokens": 45},
+                    }
+                )
+                return (
+                    f"Move 1: |||{target_territory}, 3|||\n"
+                    "Reasoning:+++Reinforce the strongest border.+++"
+                )
+
+        player = PlayerAgent("Alice", UsageLLMClient())
+        player.troops = 3
+        with tempfile.TemporaryDirectory() as temp_dir:
+            player.configure_llm_interaction_logger(
+                build_llm_interaction_logger(str(Path(temp_dir) / "game__test"))
+            )
+            player.set_interaction_context(game_round=2, turn_number=7, scope="turn")
+
+            player.make_troop_placement(rules, game_state)
+
+            interaction_files = sorted(
+                Path(temp_dir, "llm_interactions", "game__test").rglob("*.json")
+            )
+            payload = json.loads(interaction_files[0].read_text())
+            self.assertEqual(payload["response"]["usage"]["input_tokens"], 123)
+            self.assertEqual(payload["response"]["usage"]["output_tokens"], 45)
+            decision = player.get_turn_decision_log()[0]
+            self.assertEqual(decision["usage"]["total_tokens"], 168)
+
+    def test_provider_pause_error_is_written_to_interaction_logs(self):
+        _, game_state, rules = make_game_state("Alice", "Bob", "Carol")
+        seed_full_board(game_state, ["Alice", "Bob", "Carol"])
+        target_territory = game_state.get_player_territories("Alice")[0]
+
+        class QuotaThenSuccessLLMClient(StubLLMClient):
+            def __init__(self) -> None:
+                super().__init__()
+                self.provider_name = "OpenAI"
+                self.model_type = "gpt-5.1"
+                self.calls = 0
+
+            def get_chat_completion(self, messages, **kwargs) -> str:
+                self.calls += 1
+                if self.calls == 1:
+                    raise RuntimeError(
+                        "RateLimitError: quota exceeded {'error': {'code': 'insufficient_quota'}}"
+                    )
+                return (
+                    f"Move 1: |||{target_territory}, 3|||\n"
+                    "Reasoning:+++Retry succeeded.+++"
+                )
+
+        player = PlayerAgent("Alice", QuotaThenSuccessLLMClient())
+        player.troops = 3
+        player._call_llm_with_timeout = lambda message_content, **kwargs: (
+            player.send_message(message_content, **kwargs)
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            player.configure_llm_interaction_logger(
+                build_llm_interaction_logger(str(Path(temp_dir) / "game__test"))
+            )
+            player.configure_provider_pause_handler(lambda details: None)
+            player.set_interaction_context(game_round=2, turn_number=7, scope="turn")
+
+            player.make_troop_placement(rules, game_state)
+
+            interaction_files = sorted(
+                Path(temp_dir, "llm_interactions", "game__test").rglob("*.json")
+            )
+            self.assertEqual(len(interaction_files), 2)
+            pause_payload = json.loads(interaction_files[0].read_text())
+            success_payload = json.loads(interaction_files[1].read_text())
+            self.assertEqual(pause_payload["entry_type"], "provider_pause_error")
+            self.assertIn("insufficient_quota", pause_payload["response"]["error"])
+            self.assertEqual(success_payload["phase"], "troop_placement")
+            self.assertEqual(success_payload["response"]["error"], None)
 
     def test_initial_placement_prompt_includes_time_budget_and_final_check(self):
         _, game_state, rules = make_game_state("Alice", "Bob")

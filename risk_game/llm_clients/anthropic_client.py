@@ -1,7 +1,7 @@
 import os
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from anthropic import (
     APIConnectionError,
@@ -27,6 +27,8 @@ class AnthropicModelConfig:
 
 class AnthropicClient(LLMClient):
     DEFAULT_TIMEOUT_SECONDS = 1200.0
+    DEFAULT_MAX_TOKENS = 4000
+    MANUAL_THINKING_OUTPUT_HEADROOM = 512
 
     MODEL_CONFIGS: Dict[str, AnthropicModelConfig] = {
         "claude-opus-4-7": AnthropicModelConfig(
@@ -238,6 +240,39 @@ class AnthropicClient(LLMClient):
             "display": "omitted",
         }
 
+    def _standardize_usage(
+        self,
+        usage_payload: Optional[Dict[str, Any]],
+    ) -> Optional[Dict[str, Optional[int]]]:
+        if not usage_payload:
+            return None
+        input_tokens = usage_payload.get("input_tokens")
+        output_tokens = usage_payload.get("output_tokens")
+        total_tokens = None
+        if input_tokens is not None and output_tokens is not None:
+            total_tokens = int(input_tokens) + int(output_tokens)
+        return {
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total_tokens,
+            "cached_input_tokens": usage_payload.get("cache_read_input_tokens"),
+            "reasoning_tokens": usage_payload.get("thinking_tokens"),
+        }
+
+    def _resolve_max_tokens(
+        self,
+        thinking_config: Optional[Dict[str, object]],
+    ) -> int:
+        if not thinking_config or thinking_config.get("type") != "enabled":
+            return self.DEFAULT_MAX_TOKENS
+
+        budget_tokens = thinking_config.get("budget_tokens")
+        if not isinstance(budget_tokens, int):
+            return self.DEFAULT_MAX_TOKENS
+
+        minimum_valid_max_tokens = budget_tokens + self.MANUAL_THINKING_OUTPUT_HEADROOM
+        return max(self.DEFAULT_MAX_TOKENS, minimum_valid_max_tokens)
+
     def get_chat_completion(
         self,
         message_content,
@@ -261,22 +296,34 @@ class AnthropicClient(LLMClient):
 
         for attempt in range(max_attempts):
             try:
+                thinking_config = self._resolve_per_call_thinking(reasoning_effort)
                 params = {
                     "model": self.model_type,
                     "system": self.system_prompt,
-                    "max_tokens": 4000,
+                    "max_tokens": self._resolve_max_tokens(thinking_config),
                     "messages": full_prompt,
                 }
                 if self.model_config.supports_temperature:
                     params["temperature"] = 0
 
-                thinking_config = self._resolve_per_call_thinking(reasoning_effort)
                 if thinking_config is not None:
                     params["thinking"] = thinking_config
                     if self.model_config.supports_temperature:
                         params["temperature"] = 1
 
                 message = client.messages.create(**params)
+                raw_usage = (
+                    message.usage.model_dump()
+                    if getattr(message, "usage", None) is not None
+                    else None
+                )
+                self.set_last_response_metadata(
+                    {
+                        "api_variant": "messages",
+                        "usage": self._standardize_usage(raw_usage),
+                        "raw_usage": raw_usage,
+                    }
+                )
 
                 response_text = ""
                 for block in message.content:

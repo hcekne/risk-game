@@ -33,3 +33,13 @@ data/rclone-config/*
 !data/rclone-config/.gitkeep
 data/rclone-cache/*
 !data/rclone-cache/.gitkeep
+
+# Manuscript build byproducts
+docs/article-plans/*.aux
+docs/article-plans/*.bbl
+docs/article-plans/*.blg
+docs/article-plans/*.fdb_latexmk
+docs/article-plans/*.fls
+docs/article-plans/*.log
+docs/article-plans/*.out
+docs/article-plans/ocr/

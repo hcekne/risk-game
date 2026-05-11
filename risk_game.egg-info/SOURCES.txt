@@ -30,6 +30,8 @@ risk_game/utils/__init__.py
 risk_game/utils/decorators.py
 risk_game/utils/experiment_batch.py
 risk_game/utils/game_admin.py
+risk_game/utils/model_pricing.py
+risk_game/utils/provider_pause.py
 risk_game/utils/strategic_rubric.py
 risk_game/utils/turn_summary.py
 tests/__init__.py
@@ -46,11 +48,13 @@ tests/test_game_state.py
 tests/test_gemini_client_config.py
 tests/test_gemini_credit_canary.py
 tests/test_model_comparison.py
+tests/test_model_pricing.py
 tests/test_moonshot_client_config.py
 tests/test_moonshot_credit_canary.py
 tests/test_openai_client_config.py
 tests/test_openai_credit_canary.py
 tests/test_player_agent.py
+tests/test_provider_pause.py
 tests/test_regression_invariants.py
 tests/test_rules.py
 tests/test_scripted_gameplay.py

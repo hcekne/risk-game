@@ -34,6 +34,7 @@ from risk_game.utils.experiment_batch import (
     write_experiment_results,
     write_experiment_status,
 )
+from risk_game.utils.provider_pause import ExperimentPauseController
 
 
 PRESET_NAMES = [
@@ -286,6 +287,10 @@ def main() -> None:
         base_folder=args.base_folder,
     )
     write_experiment_manifest(experiment_folder, manifest)
+    pause_controller = ExperimentPauseController(
+        experiment_folder=experiment_folder,
+        manifest=manifest,
+    )
 
     results: List[dict] = []
     status = build_experiment_status(
@@ -296,10 +301,38 @@ def main() -> None:
     )
     write_experiment_status(experiment_folder, status)
 
+    def pause_for_provider_issue(
+        details: dict,
+        *,
+        current_game_index: int | None,
+        current_seat_order: List[str] | None,
+    ) -> None:
+        pause_controller.pause_for_provider_issue(
+            signal=details["signal"],
+            provider=details["provider"],
+            model=details["model"],
+            player_name=details["player_name"],
+            phase=details["phase"],
+            client_role=details["client_role"],
+            scope=details["scope"],
+            completed_games=len(results),
+            current_game_index=current_game_index,
+            current_seat_order=current_seat_order,
+            last_completed_game_folder=results[-1]["game_folder"] if results else None,
+            last_winner=results[-1]["winner"] if results else None,
+        )
+
     try:
         if not args.skip_preflight:
             print("Running provider preflight checks...")
-            preflight_results = run_agent_preflight(agent_specs)
+            preflight_results = run_agent_preflight(
+                agent_specs,
+                pause_handler=lambda details: pause_for_provider_issue(
+                    details,
+                    current_game_index=None,
+                    current_seat_order=None,
+                ),
+            )
             save_json(
                 experiment_folder / "preflight_results.json",
                 {"results": preflight_results},
@@ -338,6 +371,17 @@ def main() -> None:
 
             experiment = Experiment(config, num_games=1, agent_specs=seat_specs)
             game = experiment.initialize_game()
+            for player in game.players:
+                if hasattr(player, "configure_provider_pause_handler"):
+                    player.configure_provider_pause_handler(
+                        lambda details, game_index=game_index, order=seat_order: (
+                            pause_for_provider_issue(
+                                details,
+                                current_game_index=game_index,
+                                current_seat_order=order,
+                            )
+                        )
+                    )
             started_at = time()
             game_folder = game.play_game(
                 include_initial_troop_placement=True,

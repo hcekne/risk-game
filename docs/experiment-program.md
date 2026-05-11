@@ -6,6 +6,25 @@ It is designed to answer a small number of high-value questions under realistic 
 
 For completed tracked write-ups from this program, use the suite archive under [docs/experiment-suites/README.md](experiment-suites/README.md).
 
+## Program Update: 2026-05-07
+
+The first round of scored experiments has changed the priorities of this program.
+
+Current working conclusions:
+- the OpenAI generation question is resolved enough for now: `gpt-5.1` is the current OpenAI live-turn baseline, and the cross-provider preset currently uses `gpt-5.1` execution plus `gpt-5.5` planning
+- the balanced salvaged provider `16` and the clean direct provider `16` now agree on the headline result: Gemini won `10 / 16` in both
+- the pooled `32`-game provider estimate currently favors `gemini-3.1-pro-preview` clearly over GPT-5.1, Claude, and Kimi
+- `claude-opus-4-7` is currently the cleanest runtime baseline
+- `kimi-k2.6` remains viable but trails the stronger closed-model representatives in this setting
+- the first Kimi anchor batches now place Kimi roughly near the `gpt-4.1` tier and somewhat below `gemini-2.5-pro`
+
+What this means for the next phase:
+1. run Kimi capability-anchoring experiments against historical OpenAI, Gemini, and Anthropic anchors
+2. only then spend more budget on representation ablations or learning experiments
+3. keep future provider-wide reruns for cost-instrumented replication or roster changes, not to re-answer the basic winner question again
+
+This also means the old short OpenAI-only baseline plan is no longer a top priority unless a new OpenAI release appears or a specific provider-side question reopens.
+
 ## Research Goal
 
 Measure whether different frontier models show meaningful differences in observable strategic performance in Risk under a fixed ruleset, fixed prompt setup, and fixed runtime constraints.
@@ -30,7 +49,7 @@ That matters for at least three reasons:
 - open-vs-closed gaps are often discussed in vague benchmark terms, but a multi-turn strategy game gives a more concrete operational test of planning, adaptation, and execution
 - if `kimi-k2.6` performs competitively, that is a materially different story from “open models are still far behind”; if it lags, we want a clean estimate of how far back in model-generation terms it appears to be
 
-For this reason, the Kimi track should not stop at “does it beat today’s closed leaders?” If needed, it should also try to locate Kimi relative to earlier GPT generations.
+For this reason, the Kimi track should not stop at “does it beat today’s closed leaders?” If needed, it should also try to locate Kimi relative to earlier closed-model anchor tiers across OpenAI, Google, and Anthropic.
 
 ## Shared Protocol
 
@@ -59,29 +78,50 @@ All main experiments should hold the following constant unless the experiment ex
 ### Primary and secondary outcomes
 
 Primary endpoint:
-- final territory share
+- win count / win rate under the configured territory-control victory rule
 
 Secondary endpoints:
-- win rate
+- final territory share
 - finish rank
 - survival length
 - invalid move rate
 - fallback rate
 - mean turn time
 - strategic rubric score
+- tracked input tokens
+- tracked output tokens
+- estimated API cost
+- cost per win / win rate per dollar
+
+### Cost estimation conventions
+
+For cost-aware experiments, the repo estimates API spend from saved usage metadata plus the local pricing snapshot in [risk_game/utils/model_pricing.py](../risk_game/utils/model_pricing.py).
+
+Current convention:
+- uncached input tokens are priced at the model's input-token rate
+- cached input tokens are priced at the model's cached-input rate where available
+- output tokens are priced at the model's output-token rate
+- these components are summed across all calls for each player
+
+Important reporting rule:
+- treat these as estimated costs, not ground-truth billing exports
+- always report the pricing snapshot ID alongside any cost-per-win or strategy-per-dollar claim
+- do not compare cost across old pre-instrumentation runs that have null usage fields
 
 ### Statistical approach
 
 For each experiment:
-- Pre-register one primary outcome: final territory share.
+- Pre-register one primary outcome: wins under the configured victory rule.
 - Use one omnibus null hypothesis first.
-- Then use planned pairwise comparisons on final territory share.
-- Treat win rate and rubric as supporting evidence, not the sole headline metric.
+- Then use planned pairwise winner comparisons.
+- Treat final territory share and rubric as supporting evidence, not the sole headline metric.
 - Report effect sizes and confidence intervals, not only p-values.
 
 Recommended analysis methods:
-- blocked permutation test on final territory share
-- bootstrap confidence intervals for pairwise differences
+- winner-label permutation test for the omnibus comparison
+- exact binomial or sign-style tests for pairwise winner comparisons
+- blocked permutation on final territory share as a secondary descriptive check
+- bootstrap confidence intervals where useful
 
 ## Seat-Rotation Policy
 
@@ -141,16 +181,20 @@ Design:
 - no learning between games
 
 Primary null hypothesis:
-- H0: mean final territory share is equal across `gpt-5.5`, `gpt-5.4`, and `gpt-4.1`
+- H0: win probability is equal across `gpt-5.5`, `gpt-5.4`, and `gpt-4.1`
 
 Primary alternative hypothesis:
-- H1: at least one model has a different mean final territory share
+- H1: at least one model has a different win probability
 
 Planned directional expectation:
 - `gpt-5.5 > gpt-5.4 > gpt-4.1`
 
 Why this experiment matters:
 - It answers the cleanest public question: does a newer model generation actually produce stronger strategic play?
+
+Status update on `2026-05-06`:
+- the tracked strategic generation-ladder result is already sufficient to use `gpt-5.1` as the current OpenAI baseline for the rest of the program
+- further OpenAI-only ladder work is now lower priority than confirmatory provider replication
 
 ## Experiment 2: Size Ladder
 
@@ -168,10 +212,10 @@ Design:
 - no learning between games
 
 Primary null hypothesis:
-- H0: mean final territory share is equal across the GPT-5.4 size variants
+- H0: win probability is equal across the GPT-5.4 size variants
 
 Primary alternative hypothesis:
-- H1: at least one size variant has a different mean final territory share
+- H1: at least one size variant has a different win probability
 
 Planned directional expectation:
 - `gpt-5.4 > gpt-5.4-mini > gpt-5.4-nano`
@@ -196,10 +240,10 @@ Design:
 - no learning between games
 
 Primary null hypothesis:
-- H0: mean final territory share is equal across the three reasoning settings
+- H0: win probability is equal across the three reasoning settings
 
 Primary alternative hypothesis:
-- H1: at least one reasoning setting has a different mean final territory share
+- H1: at least one reasoning setting has a different win probability
 
 Planned directional expectation:
 - `medium > low >= none`
@@ -217,10 +261,10 @@ Question:
 - Which top usable model performs best in a live synchronous Risk setting across providers?
 
 Provisional lineup:
-- OpenAI: `gpt-5.5`
-- Anthropic: `claude-opus-4-7` in standard mode by default; adaptive thinking is now viable too, but should be treated as a separate condition rather than silently turned on
+- OpenAI: `gpt-5.1` execution plus `gpt-5.5` planning
+- Anthropic: `claude-opus-4-7`
 - Google: `gemini-3.1-pro-preview` as the chosen Google representative
-- Moonshot: `kimi-k2.6` with thinking disabled
+- Moonshot: `kimi-k2.6` with thinking disabled for execution and planning-only thinking enabled where explicitly configured
 
 Design:
 - `4` players
@@ -229,10 +273,10 @@ Design:
 - every candidate must pass a smoke test before entering the full championship
 
 Primary null hypothesis:
-- H0: mean final territory share is equal across the provider representatives
+- H0: win probability is equal across the provider representatives
 
 Primary alternative hypothesis:
-- H1: at least one provider representative has a different mean final territory share
+- H1: at least one provider representative has a different win probability
 
 Directional expectation:
 - no directional ordering should be pre-registered here
@@ -245,43 +289,118 @@ Important constraint:
 - A model that is too slow, too unstable, or too format-fragile to function as a synchronous player should be excluded on methodological grounds.
 - For this reason, `kimi-k2.6` should only enter with thinking disabled, and `gpt-5.5-pro` remains excluded from synchronous live-turn play.
 
-## Experiment 5: Open-vs-Closed Capability Anchoring
+Status update on `2026-05-07`:
+- the balanced salvaged `16`-game strategic provider result has now been followed by a clean direct `16`-game replicate
+- Gemini won `10 / 16` in both blocks
+- the pooled `32`-game result is now strong enough to treat Gemini as the current best provider representative under this frozen condition
+- future provider work should now shift from “who wins this roster?” to “why does Gemini win?” and “where exactly does Kimi sit relative to older closed-model anchor tiers?”
+
+## Experiment 5: Kimi Capability Anchoring
 
 Question:
-- If `kimi-k2.6` is not clearly the strongest in the cross-provider field, where does it sit relative to earlier OpenAI model generations?
+- If `kimi-k2.6` is not clearly the strongest in the cross-provider field, where does it sit relative to earlier closed-model anchor tiers?
 
 Core idea:
 - The cross-provider championship tells us whether Kimi is competitive with the current closed frontier.
 - This fifth experiment tells us how to interpret the result if it is not.
 - It is an anchoring experiment: it tries to locate Kimi on a rough strategic-capability timeline.
+- The defensible claim here is about **capability tier**, not literal calendar months. Different providers expose different archived models on different schedules, so "three months behind" should be treated as a public shorthand rather than the primary statistical claim.
 
 When to run it:
-- run this after Experiment 4
+- run this after a clean confirmatory replicate of Experiment 4
 - prioritize it if `kimi-k2.6` is clearly weaker than the best closed models but still appears competent and live-turn viable
 - if `kimi-k2.6` wins or ties for the top in Experiment 4, this experiment becomes optional rather than mandatory
 
-Provisional lineup:
-- `kimi-k2.6`
-- `gpt-5.4`
-- `gpt-4.1`
+Anchor families:
 
-Possible extension lineup:
-- replace `gpt-5.4` with a weaker historical anchor such as `gpt-4o` if the first anchor run suggests Kimi is closer to that tier than to `gpt-5.4`
+### First-pass design choice
 
-Design:
-- `3` players
-- `15` games
-- no learning between games
+The first pass should use duplicate-team `2x2` arenas, not mixed provider ladders.
+
+Why:
+- it isolates one anchor family at a time
+- it reduces idiosyncratic single-player variance by measuring family-vs-family strength
+- it makes the public claim cleaner: “two Kimi agents versus two copies of a single historical anchor”
+- it lets the OpenAI, Gemini, and Anthropic anchor batches run in parallel without changing the interpretation of any one result
+
+Shared design:
+- `4` players
+- `16` games
+- `2` copies of `kimi-k2.6`
+- `2` copies of one anchor model family
+- same strategic `90 / 90 / 15` condition used in the provider championship
+
+### 5A. OpenAI anchor team arena
+
+Question:
+- Is `kimi-k2.6` closer to the current OpenAI live-turn baseline or to an earlier GPT tier?
+
+First-pass lineup:
+- `kimi-k2.6-a`
+- `kimi-k2.6-b`
+- `gpt-4.1-a`
+- `gpt-4.1-b`
+
+Why this anchor:
+- `gpt-4.1` is a clean older OpenAI tier that remains accessible and strategically meaningful in this repo
+- if Kimi cannot match a duplicated `gpt-4.1` team under the same live condition, then “only a few months behind frontier” becomes much less credible in this environment
+
+Optional extension:
+- if the first pass suggests Kimi sits clearly above or clearly below `gpt-4.1`, add a second OpenAI team arena against `gpt-5.2` or another still-live intermediate anchor
+
+### 5B. Gemini anchor team arena
+
+Question:
+- Is `kimi-k2.6` closer to the current Gemini live-turn baseline or to an earlier stable Gemini tier?
+
+First-pass lineup:
+- `kimi-k2.6-a`
+- `kimi-k2.6-b`
+- `gemini-2.5-pro-a`
+- `gemini-2.5-pro-b`
+
+Why this anchor:
+- `gemini-2.5-pro` is the strongest still-accessible older Gemini anchor already supported in the repo
+- this is the cleanest way to ask whether Kimi is actually near Google’s current live frontier or still notably below it
+
+Status update on `2026-05-08`:
+- the first duplicated-team `2x2` Gemini anchor run is complete
+- `gemini-2.5-pro` beat `kimi-k2.6` `9-7`
+- that is a real directional edge, but not yet a large or decisive gap on wins alone
+- taken together with the GPT-4.1 anchor result, the current reading is that Kimi sits above-or-around the GPT-4.1 band but below Gemini 2.5 Pro in this environment
+- this makes the public-facing “Kimi is only a few months behind current frontier models” story look too optimistic for live strategic play
+
+### 5C. Anthropic anchor team arena
+
+Question:
+- Is `kimi-k2.6` closer to the current Claude frontier representative or to an older Anthropic tier?
+
+First-pass lineup:
+- `kimi-k2.6-a`
+- `kimi-k2.6-b`
+- `claude-sonnet-4-20250514-a`
+- `claude-sonnet-4-20250514-b`
+
+Why this anchor:
+- `claude-sonnet-4-20250514` is a still-accessible older Anthropic anchor that is cheaper and easier to deploy than the older Opus snapshots
+- it gives a cleaner family-level anchor than mixing current and historical Claude variants in one batch
+
+Status update on `2026-05-08`:
+- the first duplicated-team `2x2` Anthropic anchor run is complete
+- `kimi-k2.6` beat `claude-sonnet-4-20250514` `9-7`
+- that is not a decisive win-based separation, but it does show Kimi is fully competitive with this older Sonnet tier
+- more importantly, Kimi is far cheaper and much less timeout-prone under the shared live harness
+- a newer Sonnet 4.5 follow-up was also tried, but it should be treated as archived rather than as main evidence because the runtime mismatch is too severe and the pricing table is incomplete for that model
 
 Primary null hypothesis:
-- H0: mean final territory share is equal across `kimi-k2.6`, `gpt-5.4`, and `gpt-4.1`
+- H0: family-level win probability is equal across the two Kimi copies and the two anchor copies in the chosen team arena
 
 Primary alternative hypothesis:
-- H1: at least one model has a different mean final territory share
+- H1: the Kimi team and the anchor team do not have equal win probability under the same frozen live strategic condition
 
 Interpretive goal:
 - not just “did Kimi win?”
-- instead: does Kimi look closer to the current closed frontier, the previous closed generation, or below that?
+- instead: does Kimi look closer to the current closed frontier, an earlier provider tier, or clearly below that when the comparison is made against a duplicated anchor family under the same ecology?
 
 Why this experiment matters:
 - It is the clearest way to translate a cross-provider result into a statement people will actually care about.
@@ -290,9 +409,11 @@ Why this experiment matters:
 
 Important note:
 - This experiment is especially valuable for article-writing because it lets us say things like:
-  - `kimi-k2.6` looked competitive with `gpt-4.1` but not with `gpt-5.4`
-  - or `kimi-k2.6` played at roughly current-closed-frontier level under these game conditions
+- `kimi-k2.6` looked competitive with `gpt-4.1` but not with `gpt-5.1`
+- `kimi-k2.6` looked closer to an earlier Gemini tier than to `gemini-3.1-pro-preview`
+- `kimi-k2.6` looked competitive with an older Anthropic Sonnet tier, even if the win gap was not decisive
 - Those are much more interpretable public claims than “Kimi finished second in one tournament.”
+- Do not turn these into literal "months behind" claims unless the anchor grid and provider release timeline actually justify that translation.
 
 ## Model Viability Rules
 
@@ -330,14 +451,16 @@ Each experiment should report:
 - exact runtime settings
 - seat-rotation schedule
 - seed bank
-- final territory share by game
 - win rate by model
+- win outcome by game
+- final territory share by game
 - mean and median finish rank
 - invalid move rate
 - fallback rate
 - mean turn time
 - strategic rubric average
-- pairwise effect sizes on final territory share
+- pairwise winner comparisons
+- pairwise effect sizes on final territory share as a secondary diagnostic
 
 ## Kimi K2.6 Inference Recommendation
 
@@ -385,12 +508,31 @@ Source:
 ## Immediate Execution Order
 
 Recommended order:
-1. Finish provider smoke tests for Anthropic, Gemini, and Kimi
-2. Run Experiment 1: Generation Ladder
-3. Run Experiment 2: Size Ladder
-4. Run Experiment 3: Reasoning-Budget Ladder
-5. Run Experiment 4: Cross-Provider Live-Turn Championship
-6. Run Experiment 5: Open-vs-Closed Capability Anchoring if Kimi remains live-turn viable
+1. Finish the Gemini 3 Flash execution cost gate and choose the cheapest Gemini execution scaffold that does not materially degrade play
+2. Run the cost-optimized hybrid planner championship on that fixed execution scaffold
+3. Freeze the winner as a practical benchmark agent for later non-LLM engine evaluation
+4. Run a planning-trace analysis pass on the saved observable model outputs to test whether Gemini’s edge is partly explained by stronger goal-directed objective tracking
+5. Return to representation ablations or learning experiments only after the benchmark agent and planning story are no longer fragile
+
+### Next-stage research question
+
+The next article-grade question is no longer just “which provider wins?”.
+
+It is:
+- can a cheaper Gemini execution scaffold preserve most of the strong live-agent behavior?
+- once execution is fixed to that cheaper scaffold, which providers add real value in the planning phase?
+- does Gemini’s edge appear to come partly from more persistent, explicit objective tracking in its planning text?
+
+The broader framing is a system-design question:
+- when an LLM agent is decomposed into planning and execution layers, which model should do which job?
+- when does a faster, cheaper operational model outperform a stronger but slower frontier model in the overall system?
+- how much value comes from picking the right model for each subtask rather than from picking a single “best” model?
+
+That last question should be studied from the saved observable planning outputs, not from hidden chain-of-thought. The right evidence is things like:
+- explicit distance-to-target language
+- repeated re-anchoring on the `65%` victory condition
+- aggressive path selection toward the win target rather than local tactical chatter
+- adaptive replanning after a blocked line or failed attack sequence
 
 ## What This Program Lets Us Claim
 
@@ -399,6 +541,51 @@ If these experiments are run cleanly, the project should be able to support clai
 - whether model size materially changes strategic performance
 - whether extra reasoning budget helps or merely adds latency
 - which live-turn-safe provider representative performs best under fixed rules
-- how close a strong open-weight or more openly deployable model appears to be to current or earlier closed-model generations
+- how close a strong open or more openly deployable model appears to be to current or earlier closed-model generations across multiple provider lineages
+- whether the best practical LLM agent comes from a hybrid system design rather than from a single frontier model
+- whether splitting planning and execution across different models can improve both cost and performance
+- how to choose an affordable benchmark agent for later automated engine evaluation
 
 That is a strong and coherent first article program without requiring an unrealistic number of games.
+
+## Planned Dissemination Shapes
+
+The same core evidence should support multiple outputs, each aimed at a different audience.
+
+### 1. Research-style source article
+
+Purpose:
+- serve as the canonical write-up of methods, experiments, results, and interpretation
+
+Core framing:
+- this started as a model-comparison study and evolved into a systems-design study
+- the deeper result is not only “who wins Risk”
+- it is also “how to build a stronger and cheaper agent by decomposing planning and execution”
+
+### 2. LinkedIn newsletter (`~1500` words)
+
+Purpose:
+- convert the research result into a practical leadership piece for builders and technical decision-makers
+
+Core framing:
+- expensive frontier models are often not the best end-to-end system choice
+- real agent systems benefit from task decomposition
+- the best architecture may combine one model for planning and another for execution
+
+### 3. Towards Data Science article
+
+Purpose:
+- focus on experimental design, benchmarking methodology, and deployable lessons
+
+Core framing:
+- why benchmark wins do not directly imply real-world agent quality
+- why timing, fallback behavior, and cost matter
+- how to evaluate models as components inside a system rather than as isolated chat endpoints
+
+### 4. Short social and video outputs
+
+Planned derivatives:
+- three short LinkedIn posts built around distinct findings
+- one YouTube manuscript built around the broader “how to choose and compose LLMs in an agent system” story
+
+These shorter outputs should reuse the same core evidence rather than invent new claims.
