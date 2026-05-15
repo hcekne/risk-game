@@ -1,0 +1,78 @@
+\begin{thebibliography}{9}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Bakhtin et~al.(2022)Bakhtin, Brown, Dinan, Farina, Flaherty, Fried,
+  et~al.]{bakhtin2022diplomacy}
+Anton Bakhtin, Noam Brown, Emily Dinan, Gabriele Farina, Colin Flaherty, Daniel
+  Fried, et~al.
+\newblock Human-level play in the game of diplomacy by combining language
+  models with strategic reasoning.
+\newblock \emph{Science}, 378\penalty0 (6624):\penalty0 1067--1074, 2022.
+\newblock \doi{10.1126/science.ade9097}.
+
+\bibitem[Costarelli et~al.(2024)Costarelli, Allen, Hauksson, Sodunke,
+  Hariharan, Cheng, Li, Clymer, and Yadav]{costarelli2024gamebench}
+Anthony Costarelli, Mat Allen, Roman Hauksson, Grace Sodunke, Suhas Hariharan,
+  Carlson Cheng, Wenjie Li, Joshua Clymer, and Arjun Yadav.
+\newblock Gamebench: Evaluating strategic reasoning abilities of llm agents.
+\newblock \emph{arXiv preprint arXiv:2406.06613}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2406.06613}.
+
+\bibitem[Gandhi et~al.(2023)Gandhi, Sadigh, and Goodman]{gandhi2023strategic}
+Kanishk Gandhi, Dorsa Sadigh, and Noah~D. Goodman.
+\newblock Strategic reasoning with language models.
+\newblock \emph{arXiv preprint arXiv:2305.19165}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2305.19165}.
+
+\bibitem[Hendrycks et~al.(2020)Hendrycks, Burns, Basart, Zou, Mazeika, Song,
+  and Steinhardt]{hendrycks2020mmlu}
+Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn
+  Song, and Jacob Steinhardt.
+\newblock Measuring massive multitask language understanding.
+\newblock \emph{arXiv preprint arXiv:2009.03300}, 2020.
+\newblock URL \url{https://arxiv.org/abs/2009.03300}.
+
+\bibitem[Liang et~al.(2022)Liang, Bommasani, Lee, Tsipras, Soylu, Yasunaga,
+  et~al.]{liang2022helm}
+Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu,
+  Michihiro Yasunaga, et~al.
+\newblock Holistic evaluation of language models.
+\newblock \emph{arXiv preprint arXiv:2211.09110}, 2022.
+\newblock URL \url{https://arxiv.org/abs/2211.09110}.
+
+\bibitem[Liu et~al.(2023)Liu, Yu, Zhang, Xu, Lei, Lai,
+  et~al.]{liu2023agentbench}
+Xiao Liu, Hao Yu, Hanchen Zhang, Yifan Xu, Xuanyu Lei, Hanyu Lai, et~al.
+\newblock Agentbench: Evaluating llms as agents.
+\newblock \emph{arXiv preprint arXiv:2308.03688}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2308.03688}.
+
+\bibitem[Mialon et~al.(2023)Mialon, Fourrier, Swift, Wolf, LeCun, and
+  Scialom]{mialon2023gaia}
+Gr{\'e}goire Mialon, Cl{\'e}mentine Fourrier, Craig Swift, Thomas Wolf, Yann
+  LeCun, and Thomas Scialom.
+\newblock {GAIA}: a benchmark for general ai assistants.
+\newblock \emph{arXiv preprint arXiv:2311.12983}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2311.12983}.
+
+\bibitem[Srivastava et~al.(2022)Srivastava, Rastogi, Rao, Shoeb, Abid, Fisch,
+  et~al.]{srivastava2022bigbench}
+Aarohi Srivastava, Abhinav Rastogi, Abhishek Rao, Abu Awal~Md Shoeb, Abubakar
+  Abid, Adam Fisch, et~al.
+\newblock Beyond the imitation game: Quantifying and extrapolating the
+  capabilities of language models.
+\newblock \emph{arXiv preprint arXiv:2206.04615}, 2022.
+\newblock URL \url{https://arxiv.org/abs/2206.04615}.
+
+\bibitem[Yao et~al.(2024)Yao, Shinn, Razavi, and Narasimhan]{yao2024taubench}
+Shunyu Yao, Noah Shinn, Pedram Razavi, and Karthik Narasimhan.
+\newblock {$\tau$}-bench: A benchmark for tool-agent-user interaction in
+  real-world domains.
+\newblock \emph{arXiv preprint arXiv:2406.12045}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2406.12045}.
+
+\end{thebibliography}
