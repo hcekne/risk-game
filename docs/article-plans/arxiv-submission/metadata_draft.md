@@ -27,7 +27,7 @@ Important note:
 
 ## Title
 
-Evaluating LLMs as Live Strategic Agents: Provider Ranking, Hybrid Decomposition, and Operational Gaps in Timed Risk Play
+Evaluating Large Language Models as Live Strategic Agents: Provider Performance, Hybrid Decomposition, and Operational Gaps in Timed Risk Play
 
 ## Authors
 
@@ -35,7 +35,7 @@ H. C. Ekne
 
 ## Comments
 
-14 pages, 7 figures. Code, manuscript sources, and tracked experiment notes: https://github.com/hcekne/risk-game
+13 pages, 7 figures. Code and tracked notes: https://github.com/hcekne/risk-game . Public runtime artifact index: https://github.com/hcekne/risk-game/blob/master/docs/article-plans/public_experiment_artifacts.md
 
 ## Journal Reference
 
@@ -51,4 +51,4 @@ Leave blank unless you want to assign one.
 
 ## Abstract
 
-Static benchmark scores are an incomplete proxy for how large language models behave inside real agent loops. We evaluate frontier and near-frontier LLMs in a timed multi-phase Risk environment with constrained output grammar, explicit victory targets, and repeated planning/execution cycles. In a replicated 32-game cross-provider championship under frozen rules, gemini-3.1-pro-preview was the strongest full-stack live agent, winning 20 of 32 games against gpt-5.1, claude-opus-4-7, and kimi-k2.6; the pooled winner distribution differs strongly from the equal-strength null (p approx 1.5 x 10^-5). However, the main applied result is not only a provider leaderboard. Once execution is standardized to a shared cheap Gemini Flash scaffold, the provider spread compresses sharply, and a pooled 32-game planner bakeoff is consistent with near-equality (p approx 0.821). We then analyze saved planning and execution traces from the provider championship. Gemini's visible plans reference the terminal objective far more often than the others and scale that objective tracking as victory approaches. On execution, Gemini is not the cleanest runtime, but it converts more turns into deep conquest chains than the rest of the field. These findings suggest that live-agent performance depends on the interaction between objective tracking, execution conversion, cost, and runtime reliability, not just benchmark rank or release recency.
+Static benchmarks capture only part of how large language models behave in practice. Real systems place models inside repeated loops with time limits, formatting constraints, and failure modes. We study this setting in a timed multi-phase Risk environment with explicit victory targets and repeated planning and execution cycles. In a replicated 32-game cross-provider championship under frozen rules, gemini-3.1-pro-preview won 20 of 32 games against gpt-5.1, claude-opus-4-7, and kimi-k2.6, and the pooled winner distribution differs strongly from an equal-strength null (p approx 1.5 x 10^-5). We then separate planning from execution by standardizing execution on a cheaper Gemini Flash scaffold. Under this design, a pooled 32-game planner bakeoff is consistent with near-equality (p approx 0.821), which indicates that much of the earlier provider spread came from end-to-end system behavior rather than planning alone. To study mechanism, we analyze saved planning and execution traces from the provider championship. Gemini refers to the terminal objective far more often than the other models and increases that focus as victory approaches. Gemini also converts more turns into deep conquest chains, even though it is not the cleanest runtime. These results show that live-agent performance depends on objective tracking, execution conversion, cost, and runtime reliability, and they support evaluating LLMs as components in bounded workflows rather than as isolated benchmark respondents.
