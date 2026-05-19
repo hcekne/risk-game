@@ -35,7 +35,7 @@ H. C. Ekne
 
 ## Comments
 
-13 pages, 7 figures. Code and tracked notes: https://github.com/hcekne/risk-game . Public runtime artifact index: https://github.com/hcekne/risk-game/blob/master/docs/article-plans/public_experiment_artifacts.md
+13 pages, 7 figures. Code and tracked notes: https://github.com/hcekne/risk-game . Public runtime artifact index: https://github.com/hcekne/risk-game/blob/main/docs/article-plans/public_experiment_artifacts.md
 
 ## Journal Reference
 
